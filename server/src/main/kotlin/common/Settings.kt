@@ -1,0 +1,5 @@
+package common
+
+class Settings {
+
+}
