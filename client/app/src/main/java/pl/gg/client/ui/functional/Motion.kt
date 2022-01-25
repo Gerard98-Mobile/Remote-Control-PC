@@ -1,5 +1,7 @@
 package pl.gg.client.ui.functional
 
+import pl.gg.client.Config
+
 abstract class Motion {
     class Click(val method: ClickMethod) : Motion(){
         override fun getMsg(): String {
@@ -7,9 +9,9 @@ abstract class Motion {
         }
     }
 
-    class MoveBy(val x: Float, val y: Float) : Motion(){
+    class MoveBy(val x: Float, val y: Float, val speed: Float = Config.moveSpeed) : Motion(){
         override fun getMsg(): String {
-            return "{'x':${x}, 'y':${y}}"
+            return "{'x':${x * speed}, 'y':${y * speed}}"
         }
     }
 

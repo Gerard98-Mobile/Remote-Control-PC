@@ -3,13 +3,11 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.MenuScope
-import androidx.compose.ui.window.Tray
-import common.LocalAppResources
 import kotlinx.coroutines.launch
 import window.NotepadWindow
 
 @Composable
-fun ApplicationScope.NotepadApplication(state: NotepadApplicationState) {
+fun ApplicationScope.NotepadApplication(state: ApplicationState) {
 
     for (window in state.windows) {
         key(window) {
@@ -20,7 +18,7 @@ fun ApplicationScope.NotepadApplication(state: NotepadApplicationState) {
 
 
 @Composable
-private fun MenuScope.ApplicationMenu(state: NotepadApplicationState) {
+private fun MenuScope.ApplicationMenu(state: ApplicationState) {
     val scope = rememberCoroutineScope()
     fun exit() = scope.launch { state.exit() }
 

@@ -1,6 +1,6 @@
 package window
 
-import NotepadApplicationState
+import ApplicationState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.*
@@ -21,9 +21,9 @@ data class NetworkData(
     val name: String?
 )
 
-class NotepadWindowState(
-    private val application: NotepadApplicationState,
-    private val exit: (NotepadWindowState) -> Unit
+class MainWindowState(
+    private val application: ApplicationState,
+    private val exit: (MainWindowState) -> Unit
 ) {
 
     val window = WindowState(
@@ -80,10 +80,6 @@ class NotepadWindowState(
     }
 
 
-    fun sendNotification(notification: Notification) {
-        application.sendNotification(notification)
-    }
-
     private var serverInetAddress: String? = null
 
     suspend fun startServer() = withContext(Dispatchers.IO) {
@@ -101,19 +97,4 @@ class NotepadWindowState(
         serverInetAddress?.let { mouseSocketServer.sendTestMessage(it) }
     }
 
-}
-
-class DialogState<T> {
-    private var onResult: CompletableDeferred<T>? by mutableStateOf(null)
-
-    val isAwaiting get() = onResult != null
-
-    suspend fun awaitResult(): T {
-        onResult = CompletableDeferred()
-        val result = onResult!!.await()
-        onResult = null
-        return result
-    }
-
-    fun onResult(result: T) = onResult!!.complete(result)
 }

@@ -4,22 +4,16 @@ import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.HideImage
-import androidx.compose.material.icons.filled.HideSource
-import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,7 +26,7 @@ import style.icRemote
 
 @Composable
 @Preview
-fun NotepadWindow(state: NotepadWindowState) {
+fun NotepadWindow(state: MainWindowState) {
     val scope = rememberCoroutineScope()
 
     fun exit() = scope.launch { state.exit() }
@@ -49,7 +43,6 @@ fun NotepadWindow(state: NotepadWindowState) {
         focusable = true
     ) {
         LaunchedEffect(Unit) { state.startServer() }
-//        WindowMenuBar(state)
 
         Card(
             modifier = Modifier.fillMaxSize(),
@@ -105,7 +98,7 @@ fun NotepadWindow(state: NotepadWindowState) {
 }
 
 @Composable
-private fun FrameWindowScope.WindowMenuBar(state: NotepadWindowState) = MenuBar {
+private fun FrameWindowScope.WindowMenuBar(state: MainWindowState) = MenuBar {
     val scope = rememberCoroutineScope()
 
     fun startServer() = scope.launch { state.startServer() }

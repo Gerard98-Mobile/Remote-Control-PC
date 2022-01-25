@@ -60,6 +60,7 @@ class HomeViewModel : ViewModel(){
     var inetServerAddress
         get() = _inetServerAddress
         set(value) {
+            Config.serverInetAddress = value
             _inetServerAddress = value
             checkHost(value)
         }
@@ -98,8 +99,11 @@ class HomeViewModel : ViewModel(){
     var resultCount = AtomicInteger()
     fun searchForHosts(callback: (List<String>) -> Unit){
         val availableHosts = mutableListOf<String>()
+        val clientNetwork = InterfaceScanner.getNetworkInterfaces().getOrNull(0) ?: return
+        val ipPattern = clientNetwork.address.hostAddress?.dropLastWhile { it != '.' } ?: return
+
         for(i in 1..252){
-            val host = "192.168.1.${i}"
+            val host = "${ipPattern}${i}"
             isHostReachable(host) {
                 if (it) availableHosts.add(host)
                 if(resultCount.incrementAndGet() >= 252){
@@ -124,6 +128,7 @@ class HomeViewModel : ViewModel(){
             val socket = Socket()
             val inetSocketAddress = InetSocketAddress(address, port)
             socket.connect(inetSocketAddress, 2000)
+            socket.close()
             callback.invoke(true)
         } catch (e: IOException) {
             //e.printStackTrace()
@@ -138,6 +143,7 @@ class HomeViewModel : ViewModel(){
             val output = DataOutputStream(socket.getOutputStream())
             val data = motion.getMsg()
             output.writeUTF(data)
+            socket.close()
         } catch (e: Exception){
             connected = false
             e.printStackTrace()
@@ -153,11 +159,6 @@ class HomeViewModel : ViewModel(){
 fun Home(viewModel: HomeViewModel = viewModel()){
 
     val scaffoldState = rememberBackdropScaffoldState(initialValue = if(viewModel.inetServerAddress.isNullOrEmpty()) BackdropValue.Revealed else BackdropValue.Concealed)
-
-//    val scope = rememberCoroutineScope()
-//    if(!viewModel.isHostReachable) scope. {
-//        scaffoldState.reveal()
-//    }
 
     ClieantSideTheme {
         Box(modifier = Modifier.fillMaxSize()){
@@ -208,7 +209,7 @@ fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
             placeholderColor = Color.White
         )
 
-        if(!viewModel.isHostReachable && !viewModel.inetServerAddress.isNullOrEmpty()){
+        if((!viewModel.isHostReachable || !viewModel.connected) && !viewModel.inetServerAddress.isNullOrEmpty()){
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Card(modifier = Modifier
                     .padding(end = 10.dp)
@@ -325,15 +326,15 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
 
         Column(modifier = Modifier
             .padding(start = 10.dp)
-            .fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-            if (!viewModel.inetServerAddress.isNullOrEmpty()) BoldText(viewModel.inetServerAddress ?: "")
+            .fillMaxHeight()
+            .weight(1f), verticalArrangement = Arrangement.Center) {
+            if (!viewModel.inetServerAddress.isNullOrEmpty()) BoldText(viewModel.inetServerAddress ?: "") else BoldText("No host")
             if (viewModel.connected) Text("Connected", color = DarkGreen)
             else Text("Disconnected", color = DarkRed)
         }
 
         Image(painterResource(id = R.drawable.ic_settings), null, alignment = Alignment.TopEnd, modifier = Modifier
             .height(25.dp)
-            .fillMaxWidth()
             .clickable {
                 scope.launch {
                     if (state.isRevealed) {
@@ -343,7 +344,6 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
                     }
                 }
 
-//                showSettingsDialog = true
             }, colorFilter = ColorFilter.tint(Color.White))
     }
 }
@@ -360,10 +360,6 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 
         var start = 0f to 0f
         var lastMove = 0f to 0f
-
-        if(!viewModel.connected){
-
-        }
 
         Column(modifier = Modifier
             .fillMaxSize()

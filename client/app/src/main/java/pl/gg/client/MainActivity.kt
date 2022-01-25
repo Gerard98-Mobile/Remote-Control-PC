@@ -1,5 +1,6 @@
 package pl.gg.client
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Navigation()
         }
+        Config.init(this.getPreferences(Context.MODE_PRIVATE))
     }
 
 
@@ -35,14 +37,3 @@ fun Navigation() {
         /*...*/
     }
 }
-
-
-//@Preview(showBackground = true)
-//@Composable
-//fun Layout() {
-//    ClieantSideTheme {
-//        Surface(color = MaterialTheme.colors.background) {
-//            Title(name = "Siema")
-//        }
-//    }
-//}

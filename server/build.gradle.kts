@@ -24,14 +24,15 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "server"
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
+            packageName = "PhoneMouseServer"
             packageVersion = "1.0.0"
 
+            modules("java.sql")
+
             windows {
-                menu = true
                 // see https://wixtoolset.org/documentation/manual/v3/howtos/general/generate_guids.html
-                upgradeUuid = "61DAB35E-17CB-43B0-81D5-B30E1C0830FA"
+                upgradeUuid = "C0284C25-396A-45A9-9DAF-91C629DE1194"
             }
         }
     }

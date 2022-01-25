@@ -3,27 +3,26 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.Notification
 import androidx.compose.ui.window.TrayState
-import androidx.compose.ui.window.WindowState
 import common.Settings
-import window.NotepadWindowState
+import window.MainWindowState
 
 @Composable
 fun rememberApplicationState() = remember {
-    NotepadApplicationState().apply {
+    ApplicationState().apply {
         newWindow()
     }
 }
 
-class NotepadApplicationState {
+class ApplicationState {
     val settings = Settings()
     val tray = TrayState()
 
-    private val _windows = mutableStateListOf<NotepadWindowState>()
-    val windows: List<NotepadWindowState> get() = _windows
+    private val _windows = mutableStateListOf<MainWindowState>()
+    val windows: List<MainWindowState> get() = _windows
 
     fun newWindow() {
         _windows.add(
-            NotepadWindowState(
+            MainWindowState(
                 application = this,
                 exit = _windows::remove
             )
