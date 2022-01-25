@@ -36,7 +36,6 @@ class MouseSocketsServer(
                 Log.info("Message appear: " + message)
                 handler.onNewMessage(message)
                 handleMessage(message)
-
             }catch (e : Exception){
                 Log.error(e.message ?: "Socket Error")
             }
@@ -53,6 +52,8 @@ class MouseSocketsServer(
     private fun handleMessage(data: String) {
         val action = when(data){
             MouseClick.LEFT.msg -> MouseAction.Click(MouseClick.LEFT)
+            MouseClick.LEFT_UP.msg -> MouseAction.Click(MouseClick.LEFT_UP)
+            MouseClick.LEFT_DOWN.msg -> MouseAction.Click(MouseClick.LEFT_DOWN)
             MouseClick.RIGHT.msg -> MouseAction.Click(MouseClick.RIGHT)
             else -> {
                 val point = gson.fromJson<Point>(data, object : TypeToken<Point>(){}.type)
@@ -77,6 +78,12 @@ class MouseSocketsServer(
             }
             MouseClick.LEFT -> {
                 robot.mousePress(MouseEvent.BUTTON1_DOWN_MASK)
+                robot.mouseRelease(MouseEvent.BUTTON1_DOWN_MASK)
+            }
+            MouseClick.LEFT_DOWN -> {
+                robot.mousePress(MouseEvent.BUTTON1_DOWN_MASK)
+            }
+            MouseClick.LEFT_UP -> {
                 robot.mouseRelease(MouseEvent.BUTTON1_DOWN_MASK)
             }
         }

@@ -1,5 +1,6 @@
 package pl.gg.client.ui.views.home
 
+import android.util.Log
 import android.view.MotionEvent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -138,6 +139,7 @@ class HomeViewModel : ViewModel(){
 
     fun sendMsg(motion: Motion) = viewModelScope.launch(Dispatchers.IO) {
         if(!connected) return@launch
+        Log.e("Motion","Send ${motion.getMsg()}")
         try{
             val socket = Socket(inetServerAddress, port)
             val output = DataOutputStream(socket.getOutputStream())
@@ -361,37 +363,52 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
         var start = 0f to 0f
         var lastMove = 0f to 0f
 
+        var lastClickTime: Long = 0
+        var clicking = false
+
         Column(modifier = Modifier
             .fillMaxSize()
-            .pointerInteropFilter {
-                when (it.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        start = it.rawX to it.rawY
-                        lastMove = it.rawX to it.rawY
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val move = it.rawX - lastMove.first to it.rawY - lastMove.second
-                        lastMove = it.rawX to it.rawY
-                        viewModel.sendMsg(Motion.MoveBy(move.first, move.second))
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        if (isAClick(start, it.rawX to it.rawY)) viewModel.sendMsg(
-                            Motion.Click(
-                                ClickMethod.LEFT
-                            )
-                        )
-                        start = 0f to 0f
-                        lastMove = 0f to 0f
-                    }
-                    else -> return@pointerInteropFilter false
-                }
-                true
-            }
             .padding(10.dp)){
 
             Card(backgroundColor = Color.Gray, modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()){
+                .fillMaxWidth()
+                .pointerInteropFilter {
+                    when (it.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            start = it.rawX to it.rawY
+                            lastMove = it.rawX to it.rawY
+                            if (lastClickTime + 100 > System.currentTimeMillis()) {
+                                clicking = true
+                                viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_DOWN))
+                            }
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val move = it.rawX - lastMove.first to it.rawY - lastMove.second
+                            lastMove = it.rawX to it.rawY
+                            viewModel.sendMsg(Motion.MoveBy(move.first, move.second))
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            if(clicking){
+                                clicking = false
+                                viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_UP))
+                            }
+                            if (isAClick(start, it.rawX to it.rawY)) {
+                                lastClickTime = System.currentTimeMillis()
+                                viewModel.sendMsg(
+                                    Motion.Click(
+                                        ClickMethod.LEFT
+                                    )
+                                )
+                            }
+
+                            start = 0f to 0f
+                            lastMove = 0f to 0f
+                        }
+                        else -> return@pointerInteropFilter false
+                    }
+                    true
+                }){
 
             }
 
@@ -400,22 +417,22 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
                 .padding(top = 10.dp),
                 Arrangement.SpaceBetween) {
                 Button(
-                    onClick = { /* viewModel.sendMsg(Motion.Click(ClickMethod.LEFT)) */ },
+                    onClick = {viewModel.sendMsg(Motion.Click(ClickMethod.LEFT)) },
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                     modifier = Modifier
                         .weight(1f)
-                        .pointerInteropFilter {
-                            when (it.action) {
-                                MotionEvent.ACTION_DOWN -> {
-                                    viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_DOWN))
-                                }
-                                MotionEvent.ACTION_UP -> {
-                                    viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_UP))
-                                }
-                                else -> return@pointerInteropFilter false
-                            }
-                            true
-                        }
+//                        .pointerInteropFilter {
+//                            when (it.action) {
+//                                MotionEvent.ACTION_DOWN -> {
+//                                    viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_DOWN))
+//                                }
+//                                MotionEvent.ACTION_UP -> {
+//                                    viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_UP))
+//                                }
+//                                else -> return@pointerInteropFilter false
+//                            }
+//                            true
+//                        }
                 ){}
 
 //                Spacer(modifier = Modifier.fillMaxWidth(0.2f))
