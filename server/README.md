@@ -1,4 +1,3 @@
-Notepad example for desktop written in Compose for Desktop library, using Composable Window API
 
 ### Running desktop application
 ```
