@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,12 +45,10 @@ import pl.gg.client.R
 import pl.gg.client.Config
 import pl.gg.client.ui.BoldText
 import pl.gg.client.ui.Title
+import pl.gg.client.ui.base.BackHandler
 import pl.gg.client.ui.base.ErrorAlertDialog
 import pl.gg.client.ui.components.FullscreenProgressIndicator
-import pl.gg.client.ui.functional.ClickMethod
-import pl.gg.client.ui.functional.InterfaceScanner
-import pl.gg.client.ui.functional.KeyboardKey
-import pl.gg.client.ui.functional.SocketMessage
+import pl.gg.client.ui.functional.*
 import pl.gg.client.ui.theme.*
 import java.io.DataOutputStream
 import java.io.IOException
@@ -199,6 +198,7 @@ fun Home(viewModel: HomeViewModel = viewModel()){
 @ExperimentalMaterialApi
 @Composable
 fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
+
 
     Column(modifier = Modifier.padding(top = 10.dp)) {
 
@@ -362,6 +362,11 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
 @Preview
 @Composable
 fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
+
+    val focusManager = LocalFocusManager.current
+    val focusRequester = FocusRequester.Default
+    var isFocused by rememberSaveable { mutableStateOf(false) }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -374,19 +379,17 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
         var lastClickTime: Long = 0
         var clicking = false
 
+
+
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(start = 10.dp, end = 10.dp, bottom = 20.dp)){
-
-            val focusManager = LocalFocusManager.current
-            val focusRequester = FocusRequester.Default
-            var isFocused by rememberSaveable { mutableStateOf(false) }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Text(if (isFocused) "Hide Keyboard" else "Show Keyboard", modifier = Modifier
                     .wrapContentHeight()
                     .clickable {
-                        if(isFocused) focusManager.clearFocus(true)  else focusRequester.requestFocus()
+                        if (isFocused) focusManager.clearFocus(true) else focusRequester.requestFocus()
                     }
                     .padding(10.dp), textAlign = TextAlign.End)
             }
@@ -394,25 +397,34 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
             TextField(value = "",
                 keyboardActions = KeyboardActions(onPrevious = {
                     viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
+                }, onDone = {
+                    focusManager.clearFocus(true)
                 }),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 onValueChange = {
                     if(it == " ") viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
                     else viewModel.sendMsg(SocketMessage.Text(it))
-                }, modifier = Modifier.alpha(0f).height(0.dp).focusRequester(focusRequester).onFocusChanged {
-                    isFocused = it.isFocused
-                }.onKeyEvent {
-                    when(it.key){
-                        Key.Backspace -> {
-                            viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
-                            true
-                        }
-                        Key.Spacebar -> {
-                            viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
-                            true
-                        }
-                        else -> false
+                }, modifier = Modifier
+                    .alpha(0f)
+                    .height(0.dp)
+                    .focusRequester(focusRequester)
+                    .onFocusChanged {
+                        isFocused = it.isFocused
                     }
-                })
+                    .clearFocusOnKeyboardDismiss()
+                    .onKeyEvent {
+                        when (it.key) {
+                            Key.Backspace -> {
+                                viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
+                                true
+                            }
+                            Key.Spacebar -> {
+                                viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
+                                true
+                            }
+                            else -> false
+                        }
+                    })
 
 
             Card(backgroundColor = Color.Gray, modifier = Modifier
@@ -501,10 +513,12 @@ fun HostsDialog(viewModel: HomeViewModel = viewModel()){
                     .fillMaxWidth()
                     .padding(15.dp)) {
                 for (host in viewModel.availableHosts) {
-                    Row(modifier = Modifier.clickable {
-                        viewModel.inetServerAddress = host
-                        viewModel.hostsDialogVisibility = false
-                    }.padding(5.dp)) {
+                    Row(modifier = Modifier
+                        .clickable {
+                            viewModel.inetServerAddress = host
+                            viewModel.hostsDialogVisibility = false
+                        }
+                        .padding(5.dp)) {
                         Text(text = host, modifier = Modifier.weight(1f))
                         Icon(
                             Icons.Default.KeyboardArrowRight,
