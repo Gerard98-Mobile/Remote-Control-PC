@@ -1,11 +1,11 @@
 package pl.gg.client.ui.views.home
 
-import android.util.Log
 import android.view.MotionEvent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -13,14 +13,22 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -40,7 +48,8 @@ import pl.gg.client.ui.base.ErrorAlertDialog
 import pl.gg.client.ui.components.FullscreenProgressIndicator
 import pl.gg.client.ui.functional.ClickMethod
 import pl.gg.client.ui.functional.InterfaceScanner
-import pl.gg.client.ui.functional.Motion
+import pl.gg.client.ui.functional.KeyboardKey
+import pl.gg.client.ui.functional.SocketMessage
 import pl.gg.client.ui.theme.*
 import java.io.DataOutputStream
 import java.io.IOException
@@ -137,13 +146,12 @@ class HomeViewModel : ViewModel(){
         }
     }
 
-    fun sendMsg(motion: Motion) = viewModelScope.launch(Dispatchers.IO) {
+    fun sendMsg(message: SocketMessage) = viewModelScope.launch(Dispatchers.IO) {
         if(!connected) return@launch
-        Log.e("Motion","Send ${motion.getMsg()}")
         try{
             val socket = Socket(inetServerAddress, port)
             val output = DataOutputStream(socket.getOutputStream())
-            val data = motion.getMsg()
+            val data = message.getMsg()
             output.writeUTF(data)
             socket.close()
         } catch (e: Exception){
@@ -279,7 +287,7 @@ fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
 
                     viewModel.searchForHosts {
                         viewModel.progress = false
-                        if(it.isEmpty()){
+                        if (it.isEmpty()) {
                             viewModel.changeErrorDialog(true, "There is no hosts available")
                             return@searchForHosts
                         }
@@ -368,7 +376,44 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 
         Column(modifier = Modifier
             .fillMaxSize()
-            .padding(10.dp)){
+            .padding(start = 10.dp, end = 10.dp, bottom = 20.dp)){
+
+            val focusManager = LocalFocusManager.current
+            val focusRequester = FocusRequester.Default
+            var isFocused by rememberSaveable { mutableStateOf(false) }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Text(if (isFocused) "Hide Keyboard" else "Show Keyboard", modifier = Modifier
+                    .wrapContentHeight()
+                    .clickable {
+                        if(isFocused) focusManager.clearFocus(true)  else focusRequester.requestFocus()
+                    }
+                    .padding(10.dp), textAlign = TextAlign.End)
+            }
+
+            TextField(value = "",
+                keyboardActions = KeyboardActions(onPrevious = {
+                    viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
+                }),
+                onValueChange = {
+                    if(it == " ") viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
+                    else viewModel.sendMsg(SocketMessage.Text(it))
+                }, modifier = Modifier.alpha(0f).height(0.dp).focusRequester(focusRequester).onFocusChanged {
+                    isFocused = it.isFocused
+                }.onKeyEvent {
+                    when(it.key){
+                        Key.Backspace -> {
+                            viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
+                            true
+                        }
+                        Key.Spacebar -> {
+                            viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
+                            true
+                        }
+                        else -> false
+                    }
+                })
+
 
             Card(backgroundColor = Color.Gray, modifier = Modifier
                 .weight(1f)
@@ -380,23 +425,23 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
                             lastMove = it.rawX to it.rawY
                             if (lastClickTime + 100 > System.currentTimeMillis()) {
                                 clicking = true
-                                viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_DOWN))
+                                viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_DOWN))
                             }
                         }
                         MotionEvent.ACTION_MOVE -> {
                             val move = it.rawX - lastMove.first to it.rawY - lastMove.second
                             lastMove = it.rawX to it.rawY
-                            viewModel.sendMsg(Motion.MoveBy(move.first, move.second))
+                            viewModel.sendMsg(SocketMessage.MoveBy(move.first, move.second))
                         }
                         MotionEvent.ACTION_UP -> {
-                            if(clicking){
+                            if (clicking) {
                                 clicking = false
-                                viewModel.sendMsg(Motion.Click(ClickMethod.LEFT_UP))
+                                viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_UP))
                             }
                             if (isAClick(start, it.rawX to it.rawY)) {
                                 lastClickTime = System.currentTimeMillis()
                                 viewModel.sendMsg(
-                                    Motion.Click(
+                                    SocketMessage.Click(
                                         ClickMethod.LEFT
                                     )
                                 )
@@ -417,7 +462,7 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
                 .padding(top = 10.dp),
                 Arrangement.SpaceBetween) {
                 Button(
-                    onClick = {viewModel.sendMsg(Motion.Click(ClickMethod.LEFT)) },
+                    onClick = {viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT)) },
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                     modifier = Modifier
                         .weight(1f)
@@ -437,7 +482,7 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 
 //                Spacer(modifier = Modifier.fillMaxWidth(0.2f))
                 Button(
-                    onClick = {viewModel.sendMsg(Motion.Click(ClickMethod.RIGHT))},
+                    onClick = {viewModel.sendMsg(SocketMessage.Click(ClickMethod.RIGHT))},
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                     modifier = Modifier.weight(1f)
                 ){}
@@ -451,7 +496,10 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 fun HostsDialog(viewModel: HomeViewModel = viewModel()){
     Dialog(onDismissRequest = { viewModel.hostsDialogVisibility = false }) {
         Card (elevation = 0.dp, shape = RoundedCornerShape(10.dp), backgroundColor = Color.White) {
-            Column(Modifier.fillMaxWidth().padding(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)) {
                 for (host in viewModel.availableHosts) {
                     Row(modifier = Modifier.clickable {
                         viewModel.inetServerAddress = host

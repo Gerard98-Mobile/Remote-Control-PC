@@ -31,6 +31,7 @@ compose.desktop {
             modules("java.sql")
 
             windows {
+                shortcut = true
                 // see https://wixtoolset.org/documentation/manual/v3/howtos/general/generate_guids.html
                 upgradeUuid = "C0284C25-396A-45A9-9DAF-91C629DE1194"
             }

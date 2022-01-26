@@ -3,13 +3,14 @@ package functional.sockets
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
-import functional.MouseAction
+import functional.Action
 import functional.MouseClick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.impl.Log
 import java.awt.MouseInfo
 import java.awt.Robot
+import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import java.io.BufferedInputStream
 import java.io.DataInputStream
@@ -47,53 +48,24 @@ class MouseSocketsServer(
         val x: Float,
         @SerializedName("y")
         val y: Float
-    )
+    ) {
+        constructor() : this(0f,0f)
+    }
+
+    private val robot = Robot()
     private val gson = Gson()
     private fun handleMessage(data: String) {
         val action = when(data){
-            MouseClick.LEFT.msg -> MouseAction.Click(MouseClick.LEFT)
-            MouseClick.LEFT_UP.msg -> MouseAction.Click(MouseClick.LEFT_UP)
-            MouseClick.LEFT_DOWN.msg -> MouseAction.Click(MouseClick.LEFT_DOWN)
-            MouseClick.RIGHT.msg -> MouseAction.Click(MouseClick.RIGHT)
+            MouseClick.LEFT.msg -> Action.Click(MouseClick.LEFT)
+            MouseClick.LEFT_UP.msg -> Action.Click(MouseClick.LEFT_UP)
+            MouseClick.LEFT_DOWN.msg -> Action.Click(MouseClick.LEFT_DOWN)
+            MouseClick.RIGHT.msg -> Action.Click(MouseClick.RIGHT)
             else -> {
-                val point = gson.fromJson<Point>(data, object : TypeToken<Point>(){}.type)
-                MouseAction.MoveBy(point.x, point.y)
+                val message = gson.fromJson<SocketMessage>(data, object : TypeToken<SocketMessage>(){}.type)
+                message.getAction()
             }
         }
-        handleAction(action)
-    }
-
-
-    private val robot = Robot()
-    private fun moveMouse(x: Float, y: Float){
-        val actualPosition = MouseInfo.getPointerInfo().location
-        val nextPosition = Point(actualPosition.x + x, actualPosition.y + y)
-        robot.mouseMove(nextPosition.x.toInt(), nextPosition.y.toInt())
-    }
-    private fun mouseClick(mouseClick: MouseClick){
-        when(mouseClick){
-            MouseClick.RIGHT -> {
-                robot.mousePress(MouseEvent.BUTTON3_DOWN_MASK)
-                robot.mouseRelease(MouseEvent.BUTTON3_DOWN_MASK)
-            }
-            MouseClick.LEFT -> {
-                robot.mousePress(MouseEvent.BUTTON1_DOWN_MASK)
-                robot.mouseRelease(MouseEvent.BUTTON1_DOWN_MASK)
-            }
-            MouseClick.LEFT_DOWN -> {
-                robot.mousePress(MouseEvent.BUTTON1_DOWN_MASK)
-            }
-            MouseClick.LEFT_UP -> {
-                robot.mouseRelease(MouseEvent.BUTTON1_DOWN_MASK)
-            }
-        }
-    }
-
-    private fun handleAction(action: MouseAction){
-        when(action){
-            is MouseAction.Click -> mouseClick(action.action)
-            is MouseAction.MoveBy -> moveMouse(action.x, action.y)
-        }
+        action.performAction(robot)
     }
 
     var count = 0
