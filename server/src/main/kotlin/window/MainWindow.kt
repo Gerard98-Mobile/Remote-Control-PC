@@ -1,8 +1,10 @@
 package window
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
@@ -13,20 +15,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
 import common.LocalAppResources
 import kotlinx.coroutines.launch
+import org.jetbrains.skia.impl.Log
 import style.DefaultText
 import style.icMinimize
 import style.icRemote
 
 @Composable
 @Preview
-fun NotepadWindow(state: MainWindowState) {
+fun MainWindow(state: MainWindowState) {
     val scope = rememberCoroutineScope()
 
     fun exit() = scope.launch { state.exit() }
@@ -47,17 +52,33 @@ fun NotepadWindow(state: MainWindowState) {
         Card(
             modifier = Modifier.fillMaxSize(),
             backgroundColor = Color.White,
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, Color.Gray)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
 
+                val draggableState = DraggableState {
+                    Log.error("Dragged ${it}")
+                }
+
+                var startOffset: Offset? = null
+
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    modifier = Modifier.fillMaxWidth().pointerInput(Unit){
+                        detectDragGestures(
+                            onDrag = { change, offset ->
+                                state.replaceWindow(change, startOffset ?: return@detectDragGestures)
+                            },
+                            onDragStart = {
+                                startOffset = it
+                            }
+                        )
+                    }.padding(10.dp),
                     horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ){
 
                     Image(icMinimize(), null, Modifier.clickable {

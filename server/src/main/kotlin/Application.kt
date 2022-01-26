@@ -4,14 +4,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.MenuScope
 import kotlinx.coroutines.launch
-import window.NotepadWindow
+import window.MainWindow
 
 @Composable
-fun ApplicationScope.NotepadApplication(state: ApplicationState) {
+fun ApplicationScope.Application(state: ApplicationState) {
 
     for (window in state.windows) {
         key(window) {
-            NotepadWindow(window)
+            MainWindow(window)
         }
     }
 }

@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Notification
@@ -13,6 +15,7 @@ import androidx.compose.ui.window.WindowState
 import functional.sockets.MouseSocketsServer
 import functional.sockets.MouseSocketsHandler
 import kotlinx.coroutines.*
+import org.jetbrains.skia.impl.Log
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -53,6 +56,16 @@ class MainWindowState(
 
         }
     )
+
+    fun replaceWindow(change: PointerInputChange, offset: Offset){
+        val actualX = window.position.x
+        val actualY = window.position.y
+        val changeX = actualX + (change.position.x).dp
+        val changeY = actualY + (change.position.y).dp
+        val realX = changeX - offset.x.dp
+        val realY = changeY - offset.y.dp
+        window.position = WindowPosition(realX, realY)
+    }
 
 
     suspend fun fetchNetworkData() : List<NetworkData>? {
