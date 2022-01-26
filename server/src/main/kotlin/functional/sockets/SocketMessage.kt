@@ -11,6 +11,8 @@ data class SocketMessage(
     @SerializedName("key")
     val keyCode: Int?
 ){
+    constructor() : this(null,null,null)
+
     fun getAction() : Action {
         return when {
             point != null -> Action.MoveBy(point.x, point.y)

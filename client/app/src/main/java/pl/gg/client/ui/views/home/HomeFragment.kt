@@ -499,12 +499,12 @@ fun HostsDialog(viewModel: HomeViewModel = viewModel()){
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)) {
+                    .padding(15.dp)) {
                 for (host in viewModel.availableHosts) {
                     Row(modifier = Modifier.clickable {
                         viewModel.inetServerAddress = host
                         viewModel.hostsDialogVisibility = false
-                    }) {
+                    }.padding(5.dp)) {
                         Text(text = host, modifier = Modifier.weight(1f))
                         Icon(
                             Icons.Default.KeyboardArrowRight,
