@@ -1,7 +1,9 @@
 package pl.gg.client.ui.views.home
 
+import android.util.Log
 import android.view.MotionEvent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,7 +58,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 
-class HomeViewModel : ViewModel(){
+class HomeViewModel : ViewModel() {
 
     var data by mutableStateOf<List<InterfaceScanner.NetworkResult>>(emptyList())
     private var port = 6886
@@ -86,7 +88,7 @@ class HomeViewModel : ViewModel(){
     var errorDialogText by mutableStateOf("")
         private set
 
-    fun changeErrorDialog(visibility: Boolean, text: String = ""){
+    fun changeErrorDialog(visibility: Boolean, text: String = "") {
         errorDialogText = text
         errorDialogVisibility = visibility
     }
@@ -96,7 +98,10 @@ class HomeViewModel : ViewModel(){
         checkHost()
     }
 
-    fun checkHost(inetHostAddress: String? = inetServerAddress, callback: (Boolean) -> Unit = { serverReachableChange(it) }){
+    fun checkHost(
+        inetHostAddress: String? = inetServerAddress,
+        callback: (Boolean) -> Unit = { serverReachableChange(it) }
+    ) {
         inetHostAddress?.let {
             isHostReachable(it) {
                 callback.invoke(it)
@@ -106,22 +111,23 @@ class HomeViewModel : ViewModel(){
 
 
     var resultCount = AtomicInteger()
-    fun searchForHosts(callback: (List<String>) -> Unit){
+    fun searchForHosts(callback: (List<String>) -> Unit) {
         val availableHosts = mutableListOf<String>()
         val clientNetwork = InterfaceScanner.getNetworkInterfaces().getOrNull(0) ?: return
         val ipPattern = clientNetwork.address.hostAddress?.dropLastWhile { it != '.' } ?: return
 
-        for(i in 1..252){
+        for (i in 1..252) {
             val host = "${ipPattern}${i}"
             isHostReachable(host) {
                 if (it) availableHosts.add(host)
-                if(resultCount.incrementAndGet() >= 252){
+                if (resultCount.incrementAndGet() >= 252) {
                     callback.invoke(availableHosts)
                     resultCount.set(0)
                 }
             }
         }
     }
+
     fun showHostDialog(hosts: List<String> = availableHosts) {
         availableHosts = hosts
         hostsDialogVisibility = true
@@ -132,28 +138,30 @@ class HomeViewModel : ViewModel(){
         connected = value
     }
 
-    private fun isHostReachable(address: String, callback: (Boolean) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
-        try {
-            val socket = Socket()
-            val inetSocketAddress = InetSocketAddress(address, port)
-            socket.connect(inetSocketAddress, 2000)
-            socket.close()
-            callback.invoke(true)
-        } catch (e: IOException) {
-            //e.printStackTrace()
-            callback.invoke(false)
+    private fun isHostReachable(address: String, callback: (Boolean) -> Unit) =
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val socket = Socket()
+                val inetSocketAddress = InetSocketAddress(address, port)
+                socket.connect(inetSocketAddress, 2000)
+                socket.close()
+                callback.invoke(true)
+            } catch (e: IOException) {
+                //e.printStackTrace()
+                callback.invoke(false)
+            }
         }
-    }
 
     fun sendMsg(message: SocketMessage) = viewModelScope.launch(Dispatchers.IO) {
-        if(!connected) return@launch
-        try{
+        if (!connected) return@launch
+        try {
+            Log.v("SocketManager", "send msg ${message.getMsg()}")
             val socket = Socket(inetServerAddress, port)
             val output = DataOutputStream(socket.getOutputStream())
             val data = message.getMsg()
             output.writeUTF(data)
             socket.close()
-        } catch (e: Exception){
+        } catch (e: Exception) {
             connected = false
             e.printStackTrace()
         }
@@ -165,12 +173,13 @@ class HomeViewModel : ViewModel(){
 @ExperimentalComposeUiApi
 @Preview
 @Composable
-fun Home(viewModel: HomeViewModel = viewModel()){
+fun Home(viewModel: HomeViewModel = viewModel()) {
 
-    val scaffoldState = rememberBackdropScaffoldState(initialValue = if(viewModel.inetServerAddress.isNullOrEmpty()) BackdropValue.Revealed else BackdropValue.Concealed)
+    val scaffoldState =
+        rememberBackdropScaffoldState(initialValue = if (viewModel.inetServerAddress.isNullOrEmpty()) BackdropValue.Revealed else BackdropValue.Concealed)
 
     ClieantSideTheme {
-        Box(modifier = Modifier.fillMaxSize()){
+        Box(modifier = Modifier.fillMaxSize()) {
 
             BackdropScaffold(
                 scaffoldState = scaffoldState,
@@ -185,10 +194,10 @@ fun Home(viewModel: HomeViewModel = viewModel()){
                     HomeFrontLayer()
                 })
 
-            if(viewModel.progress){
+            if (viewModel.progress) {
                 FullscreenProgressIndicator()
             }
-            if(viewModel.hostsDialogVisibility){
+            if (viewModel.hostsDialogVisibility) {
                 HostsDialog()
             }
         }
@@ -197,10 +206,10 @@ fun Home(viewModel: HomeViewModel = viewModel()){
 
 @ExperimentalMaterialApi
 @Composable
-fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
+fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()) {
 
 
-    Column(modifier = Modifier.padding(top = 10.dp)) {
+    Column(modifier = Modifier) {
 
         var speed by remember { mutableStateOf(Config.moveSpeed) }
         var newHost by remember { mutableStateOf("") }
@@ -219,38 +228,51 @@ fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
             placeholderColor = Color.White
         )
 
-        if((!viewModel.isHostReachable || !viewModel.connected) && !viewModel.inetServerAddress.isNullOrEmpty()){
+        if ((!viewModel.isHostReachable || !viewModel.connected) && !viewModel.inetServerAddress.isNullOrEmpty()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Card(modifier = Modifier
-                    .padding(end = 10.dp)
-                    .clickable {
-                        viewModel.checkHost()
-                    }, backgroundColor = Color.Transparent, elevation = 0.dp) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        BoldText(text = "Host is not reachable",
+                Card(
+                    onClick = {
+                        viewModel.progress = true
+                        viewModel.checkHost {
+                            if (!it) viewModel.changeErrorDialog(true, "Host is not reachable")
+                            viewModel.progress = false
+                        }
+                    },
+                    backgroundColor = Color.Transparent,
+                    elevation = 0.dp,
+                    shape = RoundedCornerShape(5.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(10.dp)) {
+                        BoldText(
+                            text = "Try to reconnect",
                             textAlign = TextAlign.End,
                             color = DarkOrange,
-                            modifier = Modifier)
-
-                        BoldText(text = "Click here to try again",
-                            textAlign = TextAlign.End,
-                            color = DarkOrange,
-                            modifier = Modifier)
+                            modifier = Modifier
+                        )
                     }
                 }
             }
         }
 
-        if(viewModel.errorDialogVisibility){
-            ErrorAlertDialog(title = "Error", text = viewModel.errorDialogText) { viewModel.changeErrorDialog(false) }
+        if (viewModel.errorDialogVisibility) {
+            ErrorAlertDialog(
+                title = "Error",
+                text = viewModel.errorDialogText
+            ) { viewModel.changeErrorDialog(false) }
         }
 
-        Title(name = "Change host", fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, start = 10.dp, bottom = 3.dp))
+        Title(
+            name = "Change host",
+            fontSize = 14.sp,
+            modifier = Modifier.padding(start = 10.dp, bottom = 3.dp)
+        )
 
 
         var isNewHostValid by remember { mutableStateOf(true) }
-        Row(modifier = Modifier
-            .height(IntrinsicSize.Min)) {
+        Row(
+            modifier = Modifier
+                .height(IntrinsicSize.Min)
+        ) {
             OutlinedTextField(
                 value = newHost,
                 onValueChange = {
@@ -262,22 +284,25 @@ fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
                 colors = outlineColors,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
-            Image(Icons.Default.Done, contentDescription = null, colorFilter = ColorFilter.tint(Color.White), modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp)
-                .clickable {
-                    isNewHostValid = viewModel.ipRegex.matches(newHost)
-                    if (!isNewHostValid) return@clickable
+            Image(Icons.Default.Done,
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(Color.White),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp)
+                    .clickable {
+                        isNewHostValid = viewModel.ipRegex.matches(newHost)
+                        if (!isNewHostValid) return@clickable
 
-                    viewModel.progress = true
+                        viewModel.progress = true
 
-                    viewModel.checkHost(newHost) {
-                        if (it) viewModel.inetServerAddress = newHost
-                        else viewModel.changeErrorDialog(true, "Host is unreachable")
-                        viewModel.serverReachableChange(it)
-                        viewModel.progress = false
-                    }
-                })
+                        viewModel.checkHost(newHost) {
+                            if (it) viewModel.inetServerAddress = newHost
+                            else viewModel.changeErrorDialog(true, "Host is unreachable")
+                            viewModel.serverReachableChange(it)
+                            viewModel.progress = false
+                        }
+                    })
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Card(modifier = Modifier
@@ -293,18 +318,25 @@ fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
                         }
                         viewModel.showHostDialog(it)
                     }
-                }, backgroundColor = Color.Transparent, elevation = 0.dp) {
+                }, backgroundColor = Color.Transparent, elevation = 0.dp
+            ) {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "Search available hosts",
+                    Text(
+                        text = "Search available hosts",
                         textAlign = TextAlign.End,
                         color = Hyperlink,
-                        modifier = Modifier)
+                        modifier = Modifier
+                    )
                 }
             }
         }
 
 
-        Title(name = "Mouse speed: x${speed.toInt()}", fontSize = 14.sp, modifier = Modifier.padding(10.dp))
+        Title(
+            name = "Mouse speed: x${speed.toInt()}",
+            fontSize = 14.sp,
+            modifier = Modifier.padding(10.dp)
+        )
         Slider(value = speed,
             valueRange = 1f..5f,
             modifier = Modifier.padding(start = 10.dp, end = 10.dp),
@@ -322,46 +354,59 @@ fun HomeBackLayerContent(viewModel: HomeViewModel = viewModel()){
 
 @ExperimentalMaterialApi
 @Composable
-fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldState){
+fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldState) {
 
     val scope = rememberCoroutineScope()
 
-    Row (modifier = Modifier
-        .padding(10.dp)
-        .height(IntrinsicSize.Min)) {
+    Row(
+        modifier = Modifier
+            .padding(10.dp)
+            .height(IntrinsicSize.Min)
+    ) {
 
-        Image(painterResource(id = R.drawable.ic_remote), null, modifier = Modifier
-            .fillMaxHeight()
-            .padding(5.dp), colorFilter = ColorFilter.tint(Color.White))
+        Image(
+            painterResource(id = R.drawable.ic_remote), null, modifier = Modifier
+                .fillMaxHeight()
+                .padding(5.dp), colorFilter = ColorFilter.tint(Color.White)
+        )
 
-        Column(modifier = Modifier
-            .padding(start = 10.dp)
-            .fillMaxHeight()
-            .weight(1f), verticalArrangement = Arrangement.Center) {
-            if (!viewModel.inetServerAddress.isNullOrEmpty()) BoldText(viewModel.inetServerAddress ?: "") else BoldText("No host")
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .fillMaxHeight()
+                .weight(1f), verticalArrangement = Arrangement.Center
+        ) {
+            if (!viewModel.inetServerAddress.isNullOrEmpty()) BoldText(
+                viewModel.inetServerAddress ?: ""
+            ) else BoldText("No host")
             if (viewModel.connected) Text("Connected", color = DarkGreen)
             else Text("Disconnected", color = DarkRed)
         }
 
-        Image(painterResource(id = R.drawable.ic_settings), null, alignment = Alignment.TopEnd, modifier = Modifier
-            .height(25.dp)
-            .clickable {
-                scope.launch {
-                    if (state.isRevealed) {
-                        state.conceal()
-                    } else {
-                        state.reveal()
+        Image(painterResource(id = R.drawable.ic_settings),
+            null,
+            alignment = Alignment.TopEnd,
+            modifier = Modifier
+                .height(25.dp)
+                .clickable {
+                    scope.launch {
+                        if (state.isRevealed) {
+                            state.conceal()
+                        } else {
+                            state.reveal()
+                        }
                     }
-                }
 
-            }, colorFilter = ColorFilter.tint(Color.White))
+                },
+            colorFilter = ColorFilter.tint(Color.White)
+        )
     }
 }
 
 @ExperimentalComposeUiApi
 @Preview
 @Composable
-fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
+fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
 
     val focusManager = LocalFocusManager.current
     val focusRequester = FocusRequester.Default
@@ -371,7 +416,8 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
         Modifier
             .fillMaxSize()
             .alpha(if (viewModel.connected) 1f else 0.5f)
-            .padding(top = 10.dp)) {
+            .padding(top = 10.dp)
+    ) {
 
         var start = 0f to 0f
         var lastMove = 0f to 0f
@@ -381,9 +427,11 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 
 
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(start = 10.dp, end = 10.dp, bottom = 20.dp)){
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 10.dp, end = 10.dp, bottom = 20.dp)
+        ) {
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Text(if (isFocused) "Hide Keyboard" else "Show Keyboard", modifier = Modifier
@@ -398,11 +446,12 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
                 keyboardActions = KeyboardActions(onPrevious = {
                     viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
                 }, onDone = {
+                    viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.ENTER))
                     focusManager.clearFocus(true)
                 }),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 onValueChange = {
-                    if(it == " ") viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
+                    if (it == " ") viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
                     else viewModel.sendMsg(SocketMessage.Text(it))
                 }, modifier = Modifier
                     .alpha(0f)
@@ -435,7 +484,7 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
                         MotionEvent.ACTION_DOWN -> {
                             start = it.rawX to it.rawY
                             lastMove = it.rawX to it.rawY
-                            if (lastClickTime + 100 > System.currentTimeMillis()) {
+                            if (lastClickTime + 200 > System.currentTimeMillis()) {
                                 clicking = true
                                 viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_DOWN))
                             }
@@ -465,16 +514,18 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
                         else -> return@pointerInteropFilter false
                     }
                     true
-                }){
+                }) {
 
             }
 
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp),
-                Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                Arrangement.SpaceBetween
+            ) {
                 Button(
-                    onClick = {viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT)) },
+                    onClick = { viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT)) },
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                     modifier = Modifier
                         .weight(1f)
@@ -490,14 +541,14 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 //                            }
 //                            true
 //                        }
-                ){}
+                ) {}
 
 //                Spacer(modifier = Modifier.fillMaxWidth(0.2f))
                 Button(
-                    onClick = {viewModel.sendMsg(SocketMessage.Click(ClickMethod.RIGHT))},
+                    onClick = { viewModel.sendMsg(SocketMessage.Click(ClickMethod.RIGHT)) },
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                     modifier = Modifier.weight(1f)
-                ){}
+                ) {}
             }
 
         }
@@ -505,13 +556,14 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()){
 }
 
 @Composable
-fun HostsDialog(viewModel: HomeViewModel = viewModel()){
+fun HostsDialog(viewModel: HomeViewModel = viewModel()) {
     Dialog(onDismissRequest = { viewModel.hostsDialogVisibility = false }) {
-        Card (elevation = 0.dp, shape = RoundedCornerShape(10.dp), backgroundColor = Color.White) {
+        Card(elevation = 0.dp, shape = RoundedCornerShape(10.dp), backgroundColor = Color.White) {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(15.dp)) {
+                    .padding(15.dp)
+            ) {
                 for (host in viewModel.availableHosts) {
                     Row(modifier = Modifier
                         .clickable {

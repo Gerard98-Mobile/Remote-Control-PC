@@ -37,5 +37,5 @@ enum class ClickMethod(val msg: String){
 }
 
 enum class KeyboardKey(val javaKeyCode: Int){
-    BACKSPACE(8), SPACEBAR(32)
+    BACKSPACE(8), SPACEBAR(32), ENTER(10)
 }
