@@ -92,15 +92,15 @@ fun MainWindow(state: MainWindowState) {
                     })
                 }
 
-                Spacer(Modifier.height(55.dp))
+                Spacer(Modifier.height(15.dp))
 
                 Image(
                     icRemote(),
                     contentDescription = null,
-                    modifier = Modifier.width(150.dp)
+                    modifier = Modifier.width(70.dp)
                 )
 
-                Spacer(Modifier.height(75.dp))
+                Spacer(Modifier.height(15.dp))
 
                 DefaultText(
                     state.userNetworkData,
@@ -111,6 +111,18 @@ fun MainWindow(state: MainWindowState) {
                 DefaultText(
                     state.text
                 )
+
+                Spacer(Modifier.height(5.dp))
+
+                Column(
+                    Modifier.fillMaxSize().padding(5.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    state.logs.forEach {
+                        DefaultText(it)
+                    }
+                }
+
             }
         }
 

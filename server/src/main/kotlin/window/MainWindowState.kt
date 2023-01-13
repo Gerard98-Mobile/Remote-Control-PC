@@ -1,21 +1,18 @@
 package window
 
 import ApplicationState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Notification
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
-import functional.sockets.MouseSocketsServer
 import functional.sockets.MouseSocketsHandler
+import functional.sockets.MouseSocketsServer
 import kotlinx.coroutines.*
-import org.jetbrains.skia.impl.Log
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -41,6 +38,18 @@ class MainWindowState(
             _text = value
         }
 
+    private var _logs by mutableStateOf(listOf<String>())
+    val logs: List<String>
+        get() = _logs
+
+    fun addLog(value: String) {
+        _logs.toMutableList().apply {
+            add(0, value)
+            if (size > 20) removeLast()
+            _logs = this
+        }
+    }
+
     private var _userNetworkData by mutableStateOf("N/D")
     var userNetworkData
         get() = _userNetworkData
@@ -51,9 +60,12 @@ class MainWindowState(
     private val mouseSocketServer = MouseSocketsServer(
         object : MouseSocketsHandler(){
             override fun onNewMessage(message: String) {
-                text = message
+                addLog(message)
             }
 
+            override fun onError(error: Throwable) {
+                text = error.message ?: "Unknown error"
+            }
         }
     )
 
@@ -68,7 +80,7 @@ class MainWindowState(
     }
 
 
-    suspend fun fetchNetworkData() : List<NetworkData>? {
+    private fun fetchNetworkData() : List<NetworkData> {
         val items = mutableListOf<NetworkData>()
         val iterator = NetworkInterface.getNetworkInterfaces().asIterator()
 
@@ -92,22 +104,19 @@ class MainWindowState(
         window.isMinimized = true
     }
 
-
-    private var serverInetAddress: String? = null
-
     suspend fun startServer() = withContext(Dispatchers.IO) {
         text = "Starting Server..."
         val userNetwork = fetchNetworkData()
-        serverInetAddress = if(userNetwork?.size ?: 0 > 0) userNetwork?.get(0)?.id else null
-        val userNetworkString = userNetwork?.joinToString(", ") { "${it.id}" }
-        userNetworkData = userNetworkString ?: "No network data"
+        val serverInetAddress = if((userNetwork?.size ?: 0) > 0) userNetwork?.get(0)?.id else null
+        userNetworkData = serverInetAddress ?: "No network data"
 
-        text = "Waiting for messages..."
+        text = "Server running"
+        addLog("Waiting for messages...")
         mouseSocketServer.runServer()
     }
 
     suspend fun sendTestMessage() {
-        serverInetAddress?.let { mouseSocketServer.sendTestMessage(it) }
+        mouseSocketServer.sendTestMessage(userNetworkData)
     }
 
 }

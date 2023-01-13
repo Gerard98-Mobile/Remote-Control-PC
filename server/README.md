@@ -1,4 +1,4 @@
-Notepad example for desktop written in Compose for Desktop library, using Composable Window API
+Server for phone mouse
 
 ### Running desktop application
 ```

@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
 import functional.Action
 import functional.MouseClick
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.impl.Log
@@ -20,7 +21,7 @@ import java.net.ServerSocket
 import java.net.Socket
 
 class MouseSocketsServer(
-    val handler : MouseSocketsHandler
+    private val handler : MouseSocketsHandler
 ) {
 
     private val port = 6886
@@ -29,16 +30,21 @@ class MouseSocketsServer(
     suspend fun runServer() = withContext(Dispatchers.IO) {
         Log.info("Server: " + server.inetAddress.toString() + " " + server.localSocketAddress)
         while(true){
-            try{
-                Log.info("Waiting for message")
+            Log.info("Waiting for message")
+            this.runCatching {
                 val socket = server.accept()
                 val data = DataInputStream(BufferedInputStream(socket.getInputStream()))
                 val message = data.readUTF()
-                Log.info("Message appear: " + message)
-                handler.onNewMessage(message)
+                Log.info("Message appear: $message")
                 handleMessage(message)
-            }catch (e : Exception){
-                Log.error(e.message ?: "Socket Error")
+                handler.onNewMessage(message)
+                message
+            }.apply {
+                if (this.isSuccess) return@apply
+
+                val error = this.exceptionOrNull()
+                Log.error(error?.message ?: "Socket Error")
+                handler.onError(error ?: UnknownError())
             }
         }
     }
