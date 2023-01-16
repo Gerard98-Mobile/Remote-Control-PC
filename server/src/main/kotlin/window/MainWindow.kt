@@ -1,9 +1,7 @@
 package window
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,11 +21,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
 import common.LocalAppResources
+import components.Tab
 import kotlinx.coroutines.launch
 import org.jetbrains.skia.impl.Log
 import style.DefaultText
 import style.icMinimize
 import style.icRemote
+
+enum class LoggingTab {
+    LOGS, ERRORS;
+}
 
 @Composable
 @Preview
@@ -59,17 +62,12 @@ fun MainWindow(state: MainWindowState) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
-
-                val draggableState = DraggableState {
-                    Log.error("Dragged ${it}")
-                }
-
                 var startOffset: Offset? = null
 
                 Row(
                     modifier = Modifier.fillMaxWidth().pointerInput(Unit){
                         detectDragGestures(
-                            onDrag = { change, offset ->
+                            onDrag = { change, _ ->
                                 state.replaceWindow(change, startOffset ?: return@detectDragGestures)
                             },
                             onDragStart = {
@@ -112,21 +110,38 @@ fun MainWindow(state: MainWindowState) {
                     state.text
                 )
 
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(15.dp))
 
-                Column(
-                    Modifier.fillMaxSize().padding(5.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    state.logs.forEach {
-                        DefaultText(it)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
+                    LoggingTab.values().forEach {
+                        Tab(it.name, if (state.selectedTab == it) Color.Gray else Color.White, modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            state.selectedTab = it
+                        }
                     }
                 }
 
+                TextList(
+                    when (state.selectedTab) {
+                        LoggingTab.LOGS -> state.logs
+                        LoggingTab.ERRORS -> state.errorLogs
+                    }
+                )
             }
         }
+    }
+}
 
 
+@Composable
+fun TextList(data: List<String>) {
+    val scrollState = rememberScrollState()
+    Column(
+        Modifier.background(Color.Gray).fillMaxSize().padding(10.dp).verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        data.forEach {
+            DefaultText(it)
+        }
     }
 }
 

@@ -75,7 +75,6 @@ class MouseSocketsServer(
     }
 
     var count = 0
-
     suspend fun sendTestMessage(serverInetAddress: String) = withContext(Dispatchers.IO) {
         try{
             val socket = Socket(serverInetAddress, port)

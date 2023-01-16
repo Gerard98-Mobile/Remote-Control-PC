@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPosition
@@ -31,12 +32,31 @@ class MainWindowState(
         size = DpSize(300.dp, 500.dp)
     )
 
+    private var _selectedTab by mutableStateOf(LoggingTab.LOGS)
+    var selectedTab: LoggingTab
+        get() = _selectedTab
+        set(value) {
+            _selectedTab = value
+        }
+
     private var _text by mutableStateOf("")
     var text: String
         get() = _text
         set(value) {
             _text = value
         }
+
+    private var _errorLogs by mutableStateOf(listOf<String>())
+    val errorLogs: List<String>
+        get() = _errorLogs
+
+    fun addErrorLog(value: String) {
+        _errorLogs.toMutableList().apply {
+            add(0, value)
+            if (size > 20) removeLast()
+            _errorLogs = this
+        }
+    }
 
     private var _logs by mutableStateOf(listOf<String>())
     val logs: List<String>
@@ -64,10 +84,14 @@ class MainWindowState(
             }
 
             override fun onError(error: Throwable) {
-                text = error.message ?: "Unknown error"
+                addErrorLog(error.message ?: "Unknown error")
             }
         }
     )
+
+    fun changeSizeOfWindow(width: Dp? = null, height: Dp? = null) {
+        window.size = DpSize(width ?: window.size.width, height ?: window.size.height)
+    }
 
     fun replaceWindow(change: PointerInputChange, offset: Offset){
         val actualX = window.position.x
@@ -107,7 +131,7 @@ class MainWindowState(
     suspend fun startServer() = withContext(Dispatchers.IO) {
         text = "Starting Server..."
         val userNetwork = fetchNetworkData()
-        val serverInetAddress = if((userNetwork?.size ?: 0) > 0) userNetwork?.get(0)?.id else null
+        val serverInetAddress = if(userNetwork.isNotEmpty()) userNetwork[0].id else null
         userNetworkData = serverInetAddress ?: "No network data"
 
         text = "Server running"
