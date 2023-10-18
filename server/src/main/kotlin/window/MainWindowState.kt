@@ -1,19 +1,18 @@
 package window
 
 import ApplicationState
-import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import functional.sockets.MouseSocketsHandler
 import functional.sockets.MouseSocketsServer
-import kotlinx.coroutines.*
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -83,15 +82,12 @@ class MainWindowState(
                 addLog(message)
             }
 
-            override fun onError(error: Throwable) {
+            override suspend fun onError(error: Throwable) {
                 addErrorLog(error.message ?: "Unknown error")
+                startServer()
             }
         }
     )
-
-    fun changeSizeOfWindow(width: Dp? = null, height: Dp? = null) {
-        window.size = DpSize(width ?: window.size.width, height ?: window.size.height)
-    }
 
     fun replaceWindow(change: PointerInputChange, offset: Offset){
         val actualX = window.position.x
@@ -119,16 +115,16 @@ class MainWindowState(
         return items
     }
 
-    suspend fun exit(): Boolean {
+    fun exit(): Boolean {
         exit(this)
         return true
     }
 
-    suspend fun hide() {
+    fun hide() {
         window.isMinimized = true
     }
 
-    suspend fun startServer() = withContext(Dispatchers.IO) {
+    suspend fun startServer() {
         text = "Starting Server..."
         val userNetwork = fetchNetworkData()
         val serverInetAddress = if(userNetwork.isNotEmpty()) userNetwork[0].id else null
@@ -137,10 +133,6 @@ class MainWindowState(
         text = "Server running"
         addLog("Waiting for messages...")
         mouseSocketServer.runServer()
-    }
-
-    suspend fun sendTestMessage() {
-        mouseSocketServer.sendTestMessage(userNetworkData)
     }
 
 }

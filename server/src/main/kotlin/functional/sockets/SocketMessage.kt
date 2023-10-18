@@ -11,7 +11,6 @@ data class SocketMessage(
     @SerializedName("key")
     val keyCode: Int?
 ){
-    constructor() : this(null,null,null)
 
     fun getAction() : Action {
         return when {

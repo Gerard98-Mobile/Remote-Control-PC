@@ -23,8 +23,8 @@ import androidx.compose.ui.window.*
 import common.LocalAppResources
 import components.Tab
 import kotlinx.coroutines.launch
-import org.jetbrains.skia.impl.Log
 import style.DefaultText
+import style.LightGrey
 import style.icMinimize
 import style.icRemote
 
@@ -110,11 +110,11 @@ fun MainWindow(state: MainWindowState) {
                     state.text
                 )
 
-                Spacer(Modifier.height(15.dp))
+                Spacer(Modifier.height(25.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp)) {
                     LoggingTab.values().forEach {
-                        Tab(it.name, if (state.selectedTab == it) Color.Gray else Color.White, modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        Tab(it.name, if (state.selectedTab == it) LightGrey else Color.White, modifier = Modifier.weight(1f).fillMaxWidth()) {
                             state.selectedTab = it
                         }
                     }
@@ -136,26 +136,11 @@ fun MainWindow(state: MainWindowState) {
 fun TextList(data: List<String>) {
     val scrollState = rememberScrollState()
     Column(
-        Modifier.background(Color.Gray).fillMaxSize().padding(10.dp).verticalScroll(scrollState),
+        Modifier.background(LightGrey).fillMaxSize().padding(10.dp).verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         data.forEach {
             DefaultText(it)
         }
-    }
-}
-
-@Composable
-private fun FrameWindowScope.WindowMenuBar(state: MainWindowState) = MenuBar {
-    val scope = rememberCoroutineScope()
-
-    fun startServer() = scope.launch { state.startServer() }
-    fun sendTestMessage() = scope.launch { state.sendTestMessage() }
-    fun exit() = scope.launch { state.exit() }
-
-    Menu("Options") {
-        Item("Send Test Message ", onClick = { sendTestMessage() })
-        Separator()
-        Item("Exit", onClick = { exit() })
     }
 }
