@@ -51,9 +51,9 @@ class MouseSocketsServer(
 
     data class Point(
         @SerializedName("x")
-        val x: Float,
+        val x: Float = 0f,
         @SerializedName("y")
-        val y: Float
+        val y: Float = 0f
     )
 
     private val robot = Robot()
