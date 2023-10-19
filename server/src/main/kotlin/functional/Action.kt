@@ -1,6 +1,7 @@
 package functional
 
 import functional.sockets.MouseSocketsServer
+import functional.sockets.VolumeChange
 import java.awt.MouseInfo
 import java.awt.Robot
 import java.awt.event.KeyEvent
@@ -10,7 +11,7 @@ abstract class Action {
 
     abstract fun performAction(robot: Robot)
 
-    class Click(val action: MouseClick): Action() {
+    class Click(private val action: MouseClick): Action() {
         override fun performAction(robot: Robot) {
             when(action){
                 MouseClick.RIGHT -> {
@@ -31,7 +32,7 @@ abstract class Action {
         }
     }
 
-    class MoveBy(val x: Float, val y: Float): Action() {
+    class MoveBy(private val x: Float, private val y: Float): Action() {
         override fun performAction(robot: Robot) {
             val actualPosition = MouseInfo.getPointerInfo().location
             val nextPosition = MouseSocketsServer.Point(actualPosition.x + x, actualPosition.y + y)
@@ -39,7 +40,7 @@ abstract class Action {
         }
     }
 
-    class Text(val text: String): Action() {
+    class Text(private val text: String): Action() {
         override fun performAction(robot: Robot) {
             text.toCharArray().asIterable().forEach {
                 val keyCode = KeyEvent.getExtendedKeyCodeForChar(it.code)
@@ -51,6 +52,18 @@ abstract class Action {
                 }
             }
         }
+    }
+
+    class Volume(private val change: VolumeChange): Action() {
+        override fun performAction(robot: Robot) {
+            val key = when (change) {
+                VolumeChange.DOWN -> KeyEvent.VK_DOWN
+                VolumeChange.UP -> KeyEvent.VK_UP
+            }
+            robot.keyPress(key)
+            robot.keyRelease(key)
+        }
+
     }
 
     class Key(val keyCode: Int): Action(){
