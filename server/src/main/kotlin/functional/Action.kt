@@ -56,12 +56,7 @@ abstract class Action {
 
     class Volume(private val change: VolumeChange): Action() {
         override fun performAction(robot: Robot) {
-            val key = when (change) {
-                VolumeChange.DOWN -> KeyEvent.VK_DOWN
-                VolumeChange.UP -> KeyEvent.VK_UP
-            }
-            robot.keyPress(key)
-            robot.keyRelease(key)
+            // TODO
         }
 
     }
