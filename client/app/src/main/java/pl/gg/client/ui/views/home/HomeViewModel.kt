@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import pl.gg.client.Config
+import pl.gg.client.ui.data.ConnectionState
 import pl.gg.client.ui.functional.InterfaceScanner
 import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
@@ -27,7 +28,7 @@ class HomeViewModel : ViewModel() {
     var data by mutableStateOf<List<InterfaceScanner.NetworkResult>>(emptyList())
     private var port = 6886
 
-    var connected by mutableStateOf(false)
+    var state by mutableStateOf(ConnectionState.DISCONNECTED)
     var isHostReachable by mutableStateOf(false)
 
     private var _inetServerAddress by mutableStateOf(Config.serverInetAddress)
@@ -82,9 +83,9 @@ class HomeViewModel : ViewModel() {
         hostsDialogVisibility = true
     }
 
-    fun serverReachableChange(value: Boolean) = viewModelScope.launch(Dispatchers.Main) {
+    private fun serverReachableChange(value: Boolean) = viewModelScope.launch(Dispatchers.Main) {
         isHostReachable = value
-        connected = value
+        state = if (value) ConnectionState.CONNECTED else ConnectionState.DISCONNECTED
     }
 
     private fun isHostReachable(address: String, callback: (Boolean) -> Unit) =
@@ -126,7 +127,8 @@ class HomeViewModel : ViewModel() {
 
 
     fun sendMsg(message: SocketMessage) = viewModelScope.launch(Dispatchers.IO) {
-        if (!connected) return@launch
+        if (state != ConnectionState.CONNECTED) return@launch
+
         try {
             Log.v("SocketManager", "send msg ${message.getMsg()}")
             val socket = Socket(inetServerAddress, port)
@@ -135,7 +137,6 @@ class HomeViewModel : ViewModel() {
             output.writeUTF(data)
             socket.close()
         } catch (e: Exception) {
-            connected = false
             e.printStackTrace()
         }
     }

@@ -29,7 +29,6 @@ import androidx.compose.material.Slider
 import androidx.compose.material.SliderDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.runtime.Composable
@@ -73,9 +72,6 @@ import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
 import pl.gg.client.ui.functional.clearFocusOnKeyboardDismiss
 import pl.gg.client.ui.theme.ClieantSideTheme
-import pl.gg.client.ui.theme.DarkGreen
-import pl.gg.client.ui.theme.DarkOrange
-import pl.gg.client.ui.theme.DarkRed
 import pl.gg.client.ui.theme.Hyperlink
 
 @ExperimentalMaterialApi
@@ -123,33 +119,12 @@ fun HomeBackLayerContent(
     Column(modifier = Modifier) {
 
         var speed by remember { mutableStateOf(Config.moveSpeed) }
-        var newHost by remember { mutableStateOf("") }
 
         val colors = SliderDefaults.colors(
             thumbColor = Color.White,
             activeTrackColor = Color.White,
             activeTickColor = Color.White
         )
-
-        val outlineColors = TextFieldDefaults.outlinedTextFieldColors(
-            textColor = Color.White,
-            focusedBorderColor = Color.White,
-            unfocusedBorderColor = Color.White,
-            cursorColor = Color.White,
-            placeholderColor = Color.White
-        )
-
-        if ((!viewModel.isHostReachable || !viewModel.connected) && !viewModel.inetServerAddress.isNullOrEmpty()) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                OutlineButton(text = "Try to reconnect", textColor = DarkOrange) {
-                    viewModel.progress = true
-                    viewModel.checkHost {
-                        if (!it) state.showSnackbar("Host is not reachable")
-                        viewModel.progress = false
-                    }
-                }
-            }
-        }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             OutlineButton(text = "Search hosts", textColor = Hyperlink, icon = R.drawable.ic_wifi, iconTint = Hyperlink) {
@@ -195,15 +170,13 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
 
     Row(
         modifier = Modifier
-            .padding(10.dp)
+            .padding(5.dp)
             .height(IntrinsicSize.Min)
     ) {
 
-        Image(
-            painterResource(id = R.drawable.ic_remote), null, modifier = Modifier
-                .fillMaxHeight()
-                .padding(5.dp), colorFilter = ColorFilter.tint(Color.White)
-        )
+//        Image(
+//            painterResource(id = R.drawable.ic_logo), null, modifier = Modifier.fillMaxSize().background(Color.Red)
+//        )
 
         Column(
             modifier = Modifier
@@ -211,18 +184,14 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
                 .fillMaxHeight()
                 .weight(1f), verticalArrangement = Arrangement.Center
         ) {
-            if (!viewModel.inetServerAddress.isNullOrEmpty()) BoldText(
-                viewModel.inetServerAddress ?: ""
-            ) else BoldText("No host")
-            if (viewModel.connected) Text("Connected", color = DarkGreen)
-            else Text("Disconnected", color = DarkRed)
+            BoldText(
+                text = if (!viewModel.inetServerAddress.isNullOrEmpty()) viewModel.inetServerAddress ?: "" else "No host"
+            )
+            viewModel.state.CreateText()
         }
 
-        Image(painterResource(id = R.drawable.ic_settings),
-            null,
-            alignment = Alignment.TopEnd,
-            modifier = Modifier
-                .height(25.dp)
+        Column(
+            Modifier
                 .clickable {
                     scope.launch {
                         if (state.isRevealed) {
@@ -231,10 +200,16 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
                             state.reveal()
                         }
                     }
-
-                },
-            colorFilter = ColorFilter.tint(Color.White)
-        )
+                }
+                .padding(10.dp)) {
+            Image(painterResource(id = R.drawable.ic_settings),
+                null,
+                alignment = Alignment.TopEnd,
+                modifier = Modifier
+                    .height(25.dp),
+                colorFilter = ColorFilter.tint(Color.White)
+            )
+        }
     }
 }
 
@@ -250,7 +225,7 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
     Column(
         Modifier
             .fillMaxSize()
-            .alpha(if (viewModel.connected) 1f else 0.5f)
+            .alpha(viewModel.state.alpha)
             .padding(top = 10.dp)
     ) {
 
@@ -302,10 +277,12 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
                                 viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
                                 true
                             }
+
                             Key.Spacebar -> {
                                 viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
                                 true
                             }
+
                             else -> false
                         }
                     })
@@ -324,11 +301,13 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
                                 viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_DOWN))
                             }
                         }
+
                         MotionEvent.ACTION_MOVE -> {
                             val move = it.rawX - lastMove.first to it.rawY - lastMove.second
                             lastMove = it.rawX to it.rawY
                             viewModel.sendMsg(SocketMessage.MoveBy(move.first, move.second))
                         }
+
                         MotionEvent.ACTION_UP -> {
                             if (clicking) {
                                 clicking = false
@@ -346,6 +325,7 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
                             start = 0f to 0f
                             lastMove = 0f to 0f
                         }
+
                         else -> return@pointerInteropFilter false
                     }
                     true
