@@ -1,9 +1,6 @@
 package pl.gg.client.ui.views.home
 
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -11,6 +8,10 @@ import androidx.compose.ui.input.key.key
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import pl.gg.client.Config
 import pl.gg.client.ui.data.ConnectionState
@@ -25,42 +26,72 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class HomeViewModel : ViewModel() {
 
-    var data by mutableStateOf<List<InterfaceScanner.NetworkResult>>(emptyList())
-    private var port = 6886
+    companion object {
+        private const val PORT = 6886
+        private const val SEARCH_HOST_TIMEOUT_MS = 500
+    }
 
-    var state by mutableStateOf(ConnectionState.DISCONNECTED)
-    var isHostReachable by mutableStateOf(false)
+    sealed class Event {
+        class Snackbar(val message: String) : Event()
+    }
 
-    private var _inetServerAddress by mutableStateOf(Config.serverInetAddress)
-    var inetServerAddress
-        get() = _inetServerAddress
-        set(value) {
-            Config.serverInetAddress = value
-            _inetServerAddress = value
-            checkHost(value)
-        }
+    data class State(
+        val loading: Boolean = false,
+        val inetAddress: String? = Config.serverInetAddress,
+        val connection: ConnectionState = ConnectionState.DISCONNECTED,
+        val networksAvailable: List<String> = emptyList(),
+        val speed: Float = Config.moveSpeed,
+        val isHostsDialogVisible: Boolean = false
+    )
 
-    var progress by mutableStateOf(false)
-    var hostsDialogVisibility by mutableStateOf(false)
-    var availableHosts by mutableStateOf<List<String>>(emptyList())
+    private val _state = MutableStateFlow(State())
+    val state = _state.asStateFlow()
+
+    private val _events = MutableSharedFlow<Event>()
+    val events = _events.asSharedFlow()
 
     init {
-        data = InterfaceScanner.getNetworkInterfaces()
         checkHost()
     }
 
-    fun checkHost(
-        inetHostAddress: String? = inetServerAddress,
-        callback: (Boolean) -> Unit = { serverReachableChange(it) }
-    ) {
-        inetHostAddress?.let {
-            isHostReachable(it) {
-                callback.invoke(it)
-            }
+    fun updateState(action: State.() -> State) {
+        _state.value = action.invoke(state.value)
+    }
+
+    fun updateSpeed(value: Float) = updateState {
+        this.copy(speed = value)
+    }
+
+    private fun updateConnection(connected: Boolean) = updateState {
+        this.copy(
+            connection = if (connected) ConnectionState.CONNECTED else ConnectionState.DISCONNECTED
+        )
+    }
+
+    private fun updateProgress(progress: Boolean) = updateState {
+        this.copy(
+            loading = progress
+        )
+    }
+
+    fun putEvent(event: Event) = viewModelScope.launch {
+        _events.emit(event)
+    }
+
+
+
+    fun updateConfigMoveSpeed() {
+        Config.moveSpeed = state.value.speed
+    }
+
+    private fun checkHost() = state.value.inetAddress?.let {
+        isHostReachable(it) {
+            updateConnection(it)
         }
     }
 
-    fun searchForHosts(callback: (List<String>) -> Unit) {
+    fun searchForHosts() {
+        updateProgress(true)
         val resultCount = AtomicInteger()
         val availableHosts = mutableListOf<String>()
         val clientNetwork = InterfaceScanner.getNetworkInterfaces().getOrNull(0) ?: return
@@ -71,33 +102,28 @@ class HomeViewModel : ViewModel() {
             isHostReachable(host) {
                 if (it) availableHosts.add(host)
                 if (resultCount.incrementAndGet() >= 252) {
-                    callback.invoke(availableHosts)
-                    resultCount.set(0)
+                    updateState {
+                        this.copy(
+                            loading = false,
+                            networksAvailable = availableHosts,
+                            isHostsDialogVisible = availableHosts.isNotEmpty()
+                        )
+                    }
+                    if (availableHosts.isEmpty()) putEvent(Event.Snackbar("There is no hosts available"))
                 }
             }
         }
-    }
-
-    fun showHostDialog(hosts: List<String> = availableHosts) {
-        availableHosts = hosts
-        hostsDialogVisibility = true
-    }
-
-    private fun serverReachableChange(value: Boolean) = viewModelScope.launch(Dispatchers.Main) {
-        isHostReachable = value
-        state = if (value) ConnectionState.CONNECTED else ConnectionState.DISCONNECTED
     }
 
     private fun isHostReachable(address: String, callback: (Boolean) -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val socket = Socket()
-                val inetSocketAddress = InetSocketAddress(address, port)
-                socket.connect(inetSocketAddress, 2000)
+                val inetSocketAddress = InetSocketAddress(address, PORT)
+                socket.connect(inetSocketAddress, SEARCH_HOST_TIMEOUT_MS)
                 socket.close()
                 callback.invoke(true)
             } catch (e: IOException) {
-                //e.printStackTrace()
                 callback.invoke(false)
             }
         }
@@ -127,11 +153,11 @@ class HomeViewModel : ViewModel() {
 
 
     fun sendMsg(message: SocketMessage) = viewModelScope.launch(Dispatchers.IO) {
-        if (state != ConnectionState.CONNECTED) return@launch
+        if (state.value.connection != ConnectionState.CONNECTED) return@launch
 
         try {
             Log.v("SocketManager", "send msg ${message.getMsg()}")
-            val socket = Socket(inetServerAddress, port)
+            val socket = Socket(state.value.inetAddress, PORT)
             val output = DataOutputStream(socket.getOutputStream())
             val data = message.getMsg()
             output.writeUTF(data)

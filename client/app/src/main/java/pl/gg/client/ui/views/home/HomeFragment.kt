@@ -31,10 +31,12 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.rememberBackdropScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -60,8 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import pl.gg.client.Config
 import pl.gg.client.R
 import pl.gg.client.ui.BoldText
 import pl.gg.client.ui.Title
@@ -71,7 +73,6 @@ import pl.gg.client.ui.functional.ClickMethod
 import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
 import pl.gg.client.ui.functional.clearFocusOnKeyboardDismiss
-import pl.gg.client.ui.theme.ClieantSideTheme
 import pl.gg.client.ui.theme.Hyperlink
 
 @ExperimentalMaterialApi
@@ -80,45 +81,50 @@ import pl.gg.client.ui.theme.Hyperlink
 @Composable
 fun Home(
     viewModel: HomeViewModel = viewModel(),
-    state: HomeState = rememberHomeState(if (viewModel.inetServerAddress.isNullOrEmpty()) BackdropValue.Revealed else BackdropValue.Concealed)
+    state: HomeViewModel.State = viewModel.state.collectAsState().value
 ) {
 
-    ClieantSideTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
+    val scaffold: BackdropScaffoldState =
+        rememberBackdropScaffoldState(initialValue = if (state.inetAddress.isNullOrEmpty()) BackdropValue.Revealed else BackdropValue.Concealed)
 
-            BackdropScaffold(
-                scaffoldState = state.scaffold,
-                gesturesEnabled = false,
-                appBar = {
-                    HomeAppBar(state = state.scaffold)
-                },
-                backLayerContent = {
-                    HomeBackLayerContent(state)
-                },
-                frontLayerContent = {
-                    HomeFrontLayer()
-                })
-
-            if (viewModel.progress) {
-                FullscreenProgressIndicator()
-            }
-            if (viewModel.hostsDialogVisibility) {
-                HostsDialog()
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest {
+            when(it) {
+                is HomeViewModel.Event.Snackbar -> {
+                    scaffold.snackbarHostState.showSnackbar(it.message)
+                }
             }
         }
     }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        BackdropScaffold(
+            scaffoldState = scaffold,
+            gesturesEnabled = false,
+            appBar = { HomeAppBar(scaffold = scaffold) },
+            backLayerContent = { HomeBackLayerContent() },
+            frontLayerContent = { HomeFrontLayer() }
+        )
+
+        if (state.loading) {
+            FullscreenProgressIndicator()
+        }
+        if (state.isHostsDialogVisible) {
+            HostsDialog()
+        }
+    }
+
 }
 
 @ExperimentalMaterialApi
 @Composable
 fun HomeBackLayerContent(
-    state: HomeState,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = viewModel(),
+    state: HomeViewModel.State = viewModel.state.collectAsState().value,
 ) {
 
     Column(modifier = Modifier) {
-
-        var speed by remember { mutableStateOf(Config.moveSpeed) }
 
         val colors = SliderDefaults.colors(
             thumbColor = Color.White,
@@ -127,35 +133,21 @@ fun HomeBackLayerContent(
         )
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            OutlineButton(text = "Search hosts", textColor = Hyperlink, icon = R.drawable.ic_wifi, iconTint = Hyperlink) {
-                viewModel.progress = true
-
-                viewModel.searchForHosts {
-                    viewModel.progress = false
-                    if (it.isEmpty()) {
-                        state.showSnackbar("There is no hosts available")
-                        return@searchForHosts
-                    }
-                    viewModel.showHostDialog(it)
-                }
-            }
+            OutlineButton(text = "Search hosts", textColor = Hyperlink, icon = R.drawable.ic_wifi, iconTint = Hyperlink, onClick = viewModel::searchForHosts)
         }
 
 
         Title(
-            name = "Mouse speed: x${speed.toInt()}",
+            name = "Mouse speed: x${state.speed.toInt()}",
             fontSize = 14.sp,
             modifier = Modifier.padding(10.dp)
         )
-        Slider(value = speed,
+        Slider(value = state.speed,
             valueRange = 1f..5f,
             modifier = Modifier.padding(start = 10.dp, end = 10.dp),
             steps = 3,
-            onValueChange = {
-                speed = it
-            }, onValueChangeFinished = {
-                Config.moveSpeed = speed
-            },
+            onValueChange = viewModel::updateSpeed,
+            onValueChangeFinished = viewModel::updateConfigMoveSpeed,
             colors = colors
         )
     }
@@ -164,7 +156,11 @@ fun HomeBackLayerContent(
 
 @ExperimentalMaterialApi
 @Composable
-fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldState) {
+fun HomeAppBar(
+    scaffold: BackdropScaffoldState,
+    viewModel: HomeViewModel = viewModel(),
+    state: HomeViewModel.State = viewModel.state.collectAsState().value,
+) {
 
     val scope = rememberCoroutineScope()
 
@@ -174,30 +170,25 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
             .height(IntrinsicSize.Min)
     ) {
 
-//        Image(
-//            painterResource(id = R.drawable.ic_logo), null, modifier = Modifier.fillMaxSize().background(Color.Red)
-//        )
-
         Column(
             modifier = Modifier
                 .padding(start = 10.dp)
                 .fillMaxHeight()
                 .weight(1f), verticalArrangement = Arrangement.Center
         ) {
-            BoldText(
-                text = if (!viewModel.inetServerAddress.isNullOrEmpty()) viewModel.inetServerAddress ?: "" else "No host"
-            )
-            viewModel.state.CreateText()
+
+            BoldText(text = state.inetAddress ?: "No host")
+            state.connection.CreateText()
         }
 
         Column(
             Modifier
                 .clickable {
                     scope.launch {
-                        if (state.isRevealed) {
-                            state.conceal()
+                        if (scaffold.isRevealed) {
+                            scaffold.conceal()
                         } else {
-                            state.reveal()
+                            scaffold.reveal()
                         }
                     }
                 }
@@ -216,16 +207,19 @@ fun HomeAppBar(viewModel: HomeViewModel = viewModel(), state: BackdropScaffoldSt
 @ExperimentalComposeUiApi
 @Preview
 @Composable
-fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
+fun HomeFrontLayer(
+    viewModel: HomeViewModel = viewModel(),
+    state: HomeViewModel.State = viewModel.state.collectAsState().value,
+) {
 
     val focusManager = LocalFocusManager.current
-    val focusRequester = FocusRequester.Default
+    val focusRequester = FocusRequester()
     var isFocused by rememberSaveable { mutableStateOf(false) }
 
     Column(
         Modifier
             .fillMaxSize()
-            .alpha(viewModel.state.alpha)
+            .alpha(state.connection.alpha)
             .padding(top = 10.dp)
     ) {
 
@@ -234,8 +228,6 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
 
         var lastClickTime: Long = 0
         var clicking = false
-
-
 
         Column(
             modifier = Modifier
@@ -371,19 +363,32 @@ fun HomeFrontLayer(viewModel: HomeViewModel = viewModel()) {
 }
 
 @Composable
-fun HostsDialog(viewModel: HomeViewModel = viewModel()) {
-    Dialog(onDismissRequest = { viewModel.hostsDialogVisibility = false }) {
+fun HostsDialog(
+    viewModel: HomeViewModel = viewModel(),
+    state: HomeViewModel.State = viewModel.state.collectAsState().value,
+) {
+    Dialog(onDismissRequest = {
+        viewModel.updateState {
+            this.copy(
+                isHostsDialogVisible = false
+            )
+        }
+    }) {
         Card(elevation = 0.dp, shape = RoundedCornerShape(10.dp), backgroundColor = Color.White) {
             Column(
                 Modifier
                     .fillMaxWidth()
                     .padding(15.dp)
             ) {
-                for (host in viewModel.availableHosts) {
+                for (host in state.networksAvailable) {
                     Row(modifier = Modifier
                         .clickable {
-                            viewModel.inetServerAddress = host
-                            viewModel.hostsDialogVisibility = false
+                            viewModel.updateState {
+                                this.copy(
+                                    inetAddress = host,
+                                    isHostsDialogVisible = false
+                                )
+                            }
                         }
                         .padding(5.dp)) {
                         Text(text = host, modifier = Modifier.weight(1f))

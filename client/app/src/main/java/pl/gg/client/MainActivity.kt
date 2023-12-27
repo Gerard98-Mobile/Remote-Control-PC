@@ -2,7 +2,6 @@ package pl.gg.client
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material.ExperimentalMaterialApi
@@ -11,7 +10,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import pl.gg.client.ui.base.BackHandler
+import pl.gg.client.ui.theme.ClientSideTheme
 import pl.gg.client.ui.views.home.Home
 
 class MainActivity : ComponentActivity() {
@@ -21,7 +20,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Navigation()
+            ClientSideTheme {
+                Navigation()
+            }
         }
         Config.init(this.getPreferences(Context.MODE_PRIVATE))
     }
