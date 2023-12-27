@@ -24,7 +24,9 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    config: Config = Config
+) : ViewModel() {
 
     companion object {
         private const val PORT = 6886
@@ -37,14 +39,17 @@ class HomeViewModel : ViewModel() {
 
     data class State(
         val loading: Boolean = false,
-        val inetAddress: String? = Config.serverInetAddress,
+        val inetAddress: String?,
         val connection: ConnectionState = ConnectionState.DISCONNECTED,
         val networksAvailable: List<String> = emptyList(),
-        val speed: Float = Config.moveSpeed,
+        val speed: Float,
         val isHostsDialogVisible: Boolean = false
     )
 
-    private val _state = MutableStateFlow(State())
+    private val _state = MutableStateFlow(State(
+        inetAddress = config.serverInetAddress,
+        speed = config.moveSpeed
+    ))
     val state = _state.asStateFlow()
 
     private val _events = MutableSharedFlow<Event>()
@@ -77,8 +82,6 @@ class HomeViewModel : ViewModel() {
     fun putEvent(event: Event) = viewModelScope.launch {
         _events.emit(event)
     }
-
-
 
     fun updateConfigMoveSpeed() {
         Config.moveSpeed = state.value.speed
