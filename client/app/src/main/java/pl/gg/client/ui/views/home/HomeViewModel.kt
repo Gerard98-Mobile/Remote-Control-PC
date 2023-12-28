@@ -8,6 +8,8 @@ import androidx.compose.ui.input.key.key
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,6 +33,7 @@ class HomeViewModel(
     companion object {
         private const val PORT = 6886
         private const val SEARCH_HOST_TIMEOUT_MS = 500
+        private const val PING_PONG_TIME_MS = 500L
     }
 
     sealed class Event {
@@ -44,7 +47,10 @@ class HomeViewModel(
         val networksAvailable: List<String> = emptyList(),
         val speed: Float,
         val isHostsDialogVisible: Boolean = false
-    )
+    ) {
+        val tryingToReconnect
+            get() = connection == ConnectionState.DISCONNECTED && inetAddress != null
+    }
 
     private val _state = MutableStateFlow(State(
         inetAddress = config.serverInetAddress,
@@ -55,8 +61,11 @@ class HomeViewModel(
     private val _events = MutableSharedFlow<Event>()
     val events = _events.asSharedFlow()
 
+    private var pingPongJob: Job? = null
+
     init {
-        checkHost()
+//        checkHost()
+        initPingPongJob()
     }
 
     fun updateState(action: State.() -> State) {
@@ -85,6 +94,16 @@ class HomeViewModel(
 
     fun updateConfigMoveSpeed() {
         Config.moveSpeed = state.value.speed
+    }
+
+    private fun initPingPongJob() {
+        pingPongJob?.cancel()
+        pingPongJob = viewModelScope.launch {
+            while(true) {
+                checkHost()
+                delay(PING_PONG_TIME_MS)
+            }
+        }
     }
 
     private fun checkHost() = state.value.inetAddress?.let {
@@ -120,6 +139,7 @@ class HomeViewModel(
 
     private fun isHostReachable(address: String, callback: (Boolean) -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
+            Log.e("Connection", "check host: ${address}")
             try {
                 val socket = Socket()
                 val inetSocketAddress = InetSocketAddress(address, PORT)

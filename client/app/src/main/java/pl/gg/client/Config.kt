@@ -23,7 +23,7 @@ object Config {
 
     var serverInetAddress : String?
         get(){
-            return preferences?.getString("serverInetAddress", "")
+            return preferences?.getString("serverInetAddress", null)
         }
         set(value){
             with(preferences?.edit()){

@@ -25,6 +25,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Slider
 import androidx.compose.material.SliderDefaults
 import androidx.compose.material.Text
@@ -67,8 +68,10 @@ import kotlinx.coroutines.launch
 import pl.gg.client.R
 import pl.gg.client.ui.BoldText
 import pl.gg.client.ui.Title
+import pl.gg.client.ui.components.ShimmerText
 import pl.gg.client.ui.base.OutlineButton
 import pl.gg.client.ui.components.FullscreenProgressIndicator
+import pl.gg.client.ui.data.ConnectionState
 import pl.gg.client.ui.functional.ClickMethod
 import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
@@ -135,7 +138,6 @@ fun HomeBackLayerContent(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             OutlineButton(text = "Search hosts", textColor = Hyperlink, icon = R.drawable.ic_wifi, iconTint = Hyperlink, onClick = viewModel::searchForHosts)
         }
-
 
         Title(
             name = "Mouse speed: x${state.speed.toInt()}",
@@ -229,113 +231,115 @@ fun HomeFrontLayer(
         var lastClickTime: Long = 0
         var clicking = false
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 10.dp, end = 10.dp, bottom = 20.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Text(if (isFocused) "Hide Keyboard" else "Show Keyboard", modifier = Modifier
-                    .wrapContentHeight()
-                    .clickable {
-                        if (isFocused) focusManager.clearFocus(true) else focusRequester.requestFocus()
-                    }
-                    .padding(10.dp), textAlign = TextAlign.End)
-            }
-
-            TextField(value = "",
-                keyboardActions = KeyboardActions(onPrevious = {
-                    viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
-                }, onDone = {
-                    viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.ENTER))
-                    focusManager.clearFocus(true)
-                }),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                onValueChange = {
-                    if (it == " ") viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
-                    else viewModel.sendMsg(SocketMessage.Text(it))
-                }, modifier = Modifier
-                    .alpha(0f)
-                    .height(0.dp)
-                    .focusRequester(focusRequester)
-                    .onFocusChanged {
-                        isFocused = it.isFocused
-                    }
-                    .clearFocusOnKeyboardDismiss()
-                    .onKeyEvent {
-                        when (it.key) {
-                            Key.Backspace -> {
-                                viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
-                                true
-                            }
-
-                            Key.Spacebar -> {
-                                viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
-                                true
-                            }
-
-                            else -> false
-                        }
-                    })
-
-
-            Card(backgroundColor = Color.Gray, modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .pointerInteropFilter {
-                    when (it.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            start = it.rawX to it.rawY
-                            lastMove = it.rawX to it.rawY
-                            if (lastClickTime + 200 > System.currentTimeMillis()) {
-                                clicking = true
-                                viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_DOWN))
-                            }
-                        }
-
-                        MotionEvent.ACTION_MOVE -> {
-                            val move = it.rawX - lastMove.first to it.rawY - lastMove.second
-                            lastMove = it.rawX to it.rawY
-                            viewModel.sendMsg(SocketMessage.MoveBy(move.first, move.second))
-                        }
-
-                        MotionEvent.ACTION_UP -> {
-                            if (clicking) {
-                                clicking = false
-                                viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_UP))
-                            }
-                            if (isAClick(start, it.rawX to it.rawY)) {
-                                lastClickTime = System.currentTimeMillis()
-                                viewModel.sendMsg(
-                                    SocketMessage.Click(
-                                        ClickMethod.LEFT
-                                    )
-                                )
-                            }
-
-                            start = 0f to 0f
-                            lastMove = 0f to 0f
-                        }
-
-                        else -> return@pointerInteropFilter false
-                    }
-                    true
-                }) {
-
-            }
-
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                Arrangement.SpaceBetween
+                    .fillMaxSize()
+                    .padding(start = 10.dp, end = 10.dp, bottom = 20.dp)
             ) {
-                Button(
-                    onClick = { viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT)) },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(if (isFocused) "Hide Keyboard" else "Show Keyboard", modifier = Modifier
+                        .wrapContentHeight()
+                        .clickable {
+                            if (isFocused) focusManager.clearFocus(true) else focusRequester.requestFocus()
+                        }
+                        .padding(10.dp), textAlign = TextAlign.End)
+                }
+
+                TextField(value = "",
+                    keyboardActions = KeyboardActions(onPrevious = {
+                        viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
+                    }, onDone = {
+                        viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.ENTER))
+                        focusManager.clearFocus(true)
+                    }),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    onValueChange = {
+                        if (it == " ") viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
+                        else viewModel.sendMsg(SocketMessage.Text(it))
+                    }, modifier = Modifier
+                        .alpha(0f)
+                        .height(0.dp)
+                        .focusRequester(focusRequester)
+                        .onFocusChanged {
+                            isFocused = it.isFocused
+                        }
+                        .clearFocusOnKeyboardDismiss()
+                        .onKeyEvent {
+                            when (it.key) {
+                                Key.Backspace -> {
+                                    viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
+                                    true
+                                }
+
+                                Key.Spacebar -> {
+                                    viewModel.sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
+                                    true
+                                }
+
+                                else -> false
+                            }
+                        })
+
+
+                Card(backgroundColor = Color.Gray, modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                start = it.rawX to it.rawY
+                                lastMove = it.rawX to it.rawY
+                                if (lastClickTime + 200 > System.currentTimeMillis()) {
+                                    clicking = true
+                                    viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_DOWN))
+                                }
+                            }
+
+                            MotionEvent.ACTION_MOVE -> {
+                                val move = it.rawX - lastMove.first to it.rawY - lastMove.second
+                                lastMove = it.rawX to it.rawY
+                                viewModel.sendMsg(SocketMessage.MoveBy(move.first, move.second))
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                if (clicking) {
+                                    clicking = false
+                                    viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT_UP))
+                                }
+                                if (isAClick(start, it.rawX to it.rawY)) {
+                                    lastClickTime = System.currentTimeMillis()
+                                    viewModel.sendMsg(
+                                        SocketMessage.Click(
+                                            ClickMethod.LEFT
+                                        )
+                                    )
+                                }
+
+                                start = 0f to 0f
+                                lastMove = 0f to 0f
+                            }
+
+                            else -> return@pointerInteropFilter false
+                        }
+                        true
+                    }) {
+
+                }
+
+                Row(
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        onClick = { viewModel.sendMsg(SocketMessage.Click(ClickMethod.LEFT)) },
+                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
+                        modifier = Modifier
+                            .weight(1f)
 //                        .pointerInteropFilter {
 //                            when (it.action) {
 //                                MotionEvent.ACTION_DOWN -> {
@@ -348,16 +352,21 @@ fun HomeFrontLayer(
 //                            }
 //                            true
 //                        }
-                ) {}
+                    ) {}
 
 //                Spacer(modifier = Modifier.fillMaxWidth(0.2f))
-                Button(
-                    onClick = { viewModel.sendMsg(SocketMessage.Click(ClickMethod.RIGHT)) },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
-                    modifier = Modifier.weight(1f)
-                ) {}
+                    Button(
+                        onClick = { viewModel.sendMsg(SocketMessage.Click(ClickMethod.RIGHT)) },
+                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
+                        modifier = Modifier.weight(1f)
+                    ) {}
+                }
+
             }
 
+            if (state.tryingToReconnect) {
+                TryingToReconnect()
+            }
         }
     }
 }
@@ -401,6 +410,18 @@ fun HostsDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun TryingToReconnect(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        ShimmerText(
+            text = "Trying to reconnect...",
+            style = LocalTextStyle.current.copy(
+                fontSize = 18.sp
+            )
+        )
     }
 }
 
