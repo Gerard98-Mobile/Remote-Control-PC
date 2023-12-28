@@ -24,6 +24,10 @@ class MouseSocketsServer(
     private val handler : MouseSocketsHandler
 ) {
 
+    companion object {
+        private const val PING = "ping"
+    }
+
     private val port = 6886
     private val server = ServerSocket(port)
 
@@ -36,9 +40,10 @@ class MouseSocketsServer(
                 val data = DataInputStream(BufferedInputStream(socket.getInputStream()))
                 val message = data.readUTF()
                 Log.info("Message appear: $message")
-                handleMessage(message)
-                handler.onNewMessage(message)
-                message
+                if (message != PING) {
+                    handleMessage(message)
+                    handler.onNewMessage(message)
+                }
             }.apply {
                 if (this.isSuccess) return@apply
 

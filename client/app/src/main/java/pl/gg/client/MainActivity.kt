@@ -38,6 +38,5 @@ fun Navigation() {
 
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { Home() }
-        /*...*/
     }
 }

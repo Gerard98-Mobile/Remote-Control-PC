@@ -68,10 +68,9 @@ import kotlinx.coroutines.launch
 import pl.gg.client.R
 import pl.gg.client.ui.BoldText
 import pl.gg.client.ui.Title
-import pl.gg.client.ui.components.ShimmerText
 import pl.gg.client.ui.base.OutlineButton
 import pl.gg.client.ui.components.FullscreenProgressIndicator
-import pl.gg.client.ui.data.ConnectionState
+import pl.gg.client.ui.components.ShimmerText
 import pl.gg.client.ui.functional.ClickMethod
 import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
@@ -391,14 +390,7 @@ fun HostsDialog(
             ) {
                 for (host in state.networksAvailable) {
                     Row(modifier = Modifier
-                        .clickable {
-                            viewModel.updateState {
-                                this.copy(
-                                    inetAddress = host,
-                                    isHostsDialogVisible = false
-                                )
-                            }
-                        }
+                        .clickable { viewModel.selectNewHost(host) }
                         .padding(5.dp)) {
                         Text(text = host, modifier = Modifier.weight(1f))
                         Icon(

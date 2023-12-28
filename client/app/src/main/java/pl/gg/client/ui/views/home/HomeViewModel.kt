@@ -27,13 +27,14 @@ import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 
 class HomeViewModel(
-    config: Config = Config
+    private val config: Config = Config
 ) : ViewModel() {
 
     companion object {
         private const val PORT = 6886
         private const val SEARCH_HOST_TIMEOUT_MS = 500
         private const val PING_PONG_TIME_MS = 500L
+        private const val PING = "ping"
     }
 
     sealed class Event {
@@ -64,12 +65,19 @@ class HomeViewModel(
     private var pingPongJob: Job? = null
 
     init {
-//        checkHost()
         initPingPongJob()
     }
 
     fun updateState(action: State.() -> State) {
         _state.value = action.invoke(state.value)
+    }
+
+    fun selectNewHost(host: String) = updateState {
+        config.serverInetAddress = host
+        this.copy(
+            inetAddress = host,
+            isHostsDialogVisible = false
+        )
     }
 
     fun updateSpeed(value: Float) = updateState {
@@ -144,6 +152,8 @@ class HomeViewModel(
                 val socket = Socket()
                 val inetSocketAddress = InetSocketAddress(address, PORT)
                 socket.connect(inetSocketAddress, SEARCH_HOST_TIMEOUT_MS)
+                val output = DataOutputStream(socket.getOutputStream())
+                output.writeUTF(PING)
                 socket.close()
                 callback.invoke(true)
             } catch (e: IOException) {
