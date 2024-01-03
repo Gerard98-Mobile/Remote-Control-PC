@@ -7,6 +7,8 @@ import java.awt.Robot
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 
+private const val CHANGE_VOLUME_COMMAND = "nircmd.exe changesysvolume"
+
 abstract class Action {
 
     abstract fun performAction(robot: Robot)
@@ -56,7 +58,7 @@ abstract class Action {
 
     class Volume(private val change: VolumeChange): Action() {
         override fun performAction(robot: Robot) {
-            // TODO
+            Runtime.getRuntime().exec(arrayOf("$CHANGE_VOLUME_COMMAND ${change.units}"))
         }
 
     }

@@ -28,6 +28,17 @@ abstract class SocketMessage {
         }
     }
 
+    class Volume(val option: Option) : SocketMessage() {
+
+        enum class Option {
+            UP, DOWN
+        }
+
+        override fun getMsg(): String {
+            return "{'volume':'${option}'}"
+        }
+    }
+
     abstract fun getMsg() : String
 }
 

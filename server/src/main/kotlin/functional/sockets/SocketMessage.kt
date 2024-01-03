@@ -3,8 +3,8 @@ package functional.sockets
 import com.google.gson.annotations.SerializedName
 import functional.Action
 
-enum class VolumeChange {
-    UP, DOWN
+enum class VolumeChange(val units: Int) {
+    UP(1000), DOWN(-1000)
 }
 
 data class SocketMessage(

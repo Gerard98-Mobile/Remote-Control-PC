@@ -1,10 +1,6 @@
 package pl.gg.client.ui.views.home
 
 import android.util.Log
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.key
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -18,8 +14,8 @@ import kotlinx.coroutines.launch
 import pl.gg.client.Config
 import pl.gg.client.ui.data.ConnectionState
 import pl.gg.client.ui.functional.InterfaceScanner
-import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
+import pl.gg.client.ui.functional.SocketMessage.Volume.Option
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -47,7 +43,8 @@ class HomeViewModel(
         val connection: ConnectionState = ConnectionState.DISCONNECTED,
         val networksAvailable: List<String> = emptyList(),
         val speed: Float,
-        val isHostsDialogVisible: Boolean = false
+        val isHostsDialogVisible: Boolean = false,
+        val selectedMenuItem: HomeMenuItem? = null
     ) {
         val tryingToReconnect
             get() = connection == ConnectionState.DISCONNECTED && inetAddress != null
@@ -145,6 +142,10 @@ class HomeViewModel(
         }
     }
 
+    fun selectMenuItem(item: HomeMenuItem) = updateState {
+        this.copy(selectedMenuItem = if (this.selectedMenuItem == item) null else item)
+    }
+
     private fun isHostReachable(address: String, callback: (Boolean) -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
             Log.e("Connection", "check host: ${address}")
@@ -161,29 +162,9 @@ class HomeViewModel(
             }
         }
 
-    @OptIn(ExperimentalComposeUiApi::class)
-    fun sendMsgByKeyEvent(event: KeyEvent) : Boolean =
-        when (event.key) {
-            Key.Backspace -> {
-                sendMsg(SocketMessage.KeyMessage(KeyboardKey.BACKSPACE))
-                true
-            }
-            Key.Spacebar -> {
-                sendMsg(SocketMessage.KeyMessage(KeyboardKey.SPACEBAR))
-                true
-            }
-//            @TODO add volume changes
-//            Key.VolumeUp -> {
-//                sendMsg(SocketMessage.VolumeMessage("UP"))
-//                true
-//            }
-//            Key.VolumeDown -> {
-//                sendMsg(SocketMessage.VolumeMessage("DOWN"))
-//                true
-//            }
-            else -> false
-        }
 
+    fun increaseVolume() = sendMsg(SocketMessage.Volume(Option.UP))
+    fun decreaseVolume() = sendMsg(SocketMessage.Volume(Option.DOWN))
 
     fun sendMsg(message: SocketMessage) = viewModelScope.launch(Dispatchers.IO) {
         if (state.value.connection != ConnectionState.CONNECTED) return@launch

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,8 +27,6 @@ import androidx.compose.material.Card
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.Slider
-import androidx.compose.material.SliderDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
@@ -67,15 +66,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import pl.gg.client.R
 import pl.gg.client.ui.BoldText
-import pl.gg.client.ui.Title
-import pl.gg.client.ui.base.OutlineButton
 import pl.gg.client.ui.components.FullscreenProgressIndicator
 import pl.gg.client.ui.components.ShimmerText
 import pl.gg.client.ui.functional.ClickMethod
 import pl.gg.client.ui.functional.KeyboardKey
 import pl.gg.client.ui.functional.SocketMessage
 import pl.gg.client.ui.functional.clearFocusOnKeyboardDismiss
-import pl.gg.client.ui.theme.Hyperlink
 
 @ExperimentalMaterialApi
 @ExperimentalComposeUiApi
@@ -121,36 +117,15 @@ fun Home(
 
 @ExperimentalMaterialApi
 @Composable
-fun HomeBackLayerContent(
-    viewModel: HomeViewModel = viewModel(),
-    state: HomeViewModel.State = viewModel.state.collectAsState().value,
-) {
+fun HomeBackLayerContent() {
 
     Column(modifier = Modifier) {
 
-        val colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.White,
-            activeTickColor = Color.White
-        )
+        Spacer(modifier = Modifier.height(5.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            OutlineButton(text = "Search hosts", textColor = Hyperlink, icon = R.drawable.ic_wifi, iconTint = Hyperlink, onClick = viewModel::searchForHosts)
-        }
+        HomeMenuRow()
 
-        Title(
-            name = "Mouse speed: x${state.speed.toInt()}",
-            fontSize = 14.sp,
-            modifier = Modifier.padding(10.dp)
-        )
-        Slider(value = state.speed,
-            valueRange = 1f..5f,
-            modifier = Modifier.padding(start = 10.dp, end = 10.dp),
-            steps = 3,
-            onValueChange = viewModel::updateSpeed,
-            onValueChangeFinished = viewModel::updateConfigMoveSpeed,
-            colors = colors
-        )
+        Spacer(modifier = Modifier.height(10.dp))
     }
 
 }

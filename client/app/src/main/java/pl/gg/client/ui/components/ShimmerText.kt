@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 
+private const val DURATION_MS = 1000
+
 @Composable
 fun ShimmerText(
     text: String,
@@ -33,7 +35,7 @@ fun ShimmerText(
     val offset by rememberInfiniteTransition(label = "").animateFloat(
         initialValue = 0f,
         targetValue = currentFontSizeDoublePx,
-        animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing)),
+        animationSpec = infiniteRepeatable(tween(DURATION_MS, easing = LinearEasing)),
         label = ""
     )
 
@@ -45,7 +47,7 @@ fun ShimmerText(
     )
 
     Text(
-        text = "Trying to reconnect...",
+        text = text,
         style = mergedStyle.copy(
             brush = brush,
         )
