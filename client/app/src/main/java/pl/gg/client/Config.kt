@@ -6,11 +6,24 @@ object Config {
 
     private var preferences : SharedPreferences? = null
 
-    var moveSpeed = 1f
+    fun init(preferences: SharedPreferences){
+        this.preferences = preferences
+    }
+
+    var moveSpeed : Float
+        get(){
+            return preferences?.getFloat("moveSpeed", 1f) ?: 1f
+        }
+        set(value){
+            with(preferences?.edit()){
+                this?.putFloat("moveSpeed", value)
+                this?.apply()
+            }
+        }
 
     var serverInetAddress : String?
         get(){
-            return preferences?.getString("serverInetAddress", "")
+            return preferences?.getString("serverInetAddress", null)
         }
         set(value){
             with(preferences?.edit()){

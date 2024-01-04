@@ -5,6 +5,6 @@ import common.rememberAppResources
 
 fun main() = application {
     CompositionLocalProvider(LocalAppResources provides rememberAppResources()) {
-        NotepadApplication(rememberApplicationState())
+        Application(rememberApplicationState())
     }
 }
