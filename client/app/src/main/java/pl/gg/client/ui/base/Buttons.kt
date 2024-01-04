@@ -34,9 +34,25 @@ fun ButtonsPreview() = Column {
         icon = R.drawable.ic_wifi
     ) { }
 
-    CardIconButton(
-        icon = R.drawable.ic_wifi
-    ) {}
+    Row {
+        CardIconButton(
+            icon = R.drawable.ic_wifi
+        ) {}
+
+        Spacer(Modifier.width(5.dp))
+
+        CardIconButton(
+            icon = R.drawable.ic_wifi,
+            selected = true
+        ) {}
+
+        Spacer(Modifier.width(5.dp))
+
+        CardIconButton(
+            icon = R.drawable.ic_wifi
+        ) {}
+    }
+
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -83,18 +99,20 @@ fun CardIconButton(
     @DrawableRes icon: Int,
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color.LightGray,
+    selected: Boolean = false,
     onClick: () -> Unit,
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        backgroundColor = backgroundColor
+        backgroundColor = backgroundColor,
+        elevation = if (selected) 5.dp else 1.dp
     ) {
         Image(
             painterResource(id = icon),
             null,
             modifier = Modifier
                 .padding(10.dp)
-                .size(24.dp),
+                .size(if (selected) 32.dp else 24.dp),
         )
     }
 }

@@ -56,14 +56,16 @@ fun HomeMenuRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         val modifier = Modifier.padding(2.dp)
         HomeMenuItem.entries.forEach {
             CardIconButton(
                 icon = it.icon,
                 modifier = modifier,
-                onClick = { it.onClick(viewModel, it) }
+                onClick = { it.onClick(viewModel, it) },
+                selected = state.selectedMenuItem == it
             )
         }
     }
