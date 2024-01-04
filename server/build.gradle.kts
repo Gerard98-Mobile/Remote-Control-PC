@@ -28,7 +28,7 @@ compose.desktop {
             packageName = "Remote Control PC - Server"
             packageVersion = "1.0.0"
 
-//            modules("java.sql")
+            modules("java.sql")
 
             windows {
                 shortcut = true
