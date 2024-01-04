@@ -20,11 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
-import common.LocalAppResources
 import components.Tab
 import kotlinx.coroutines.launch
 import style.DefaultText
 import style.LightGrey
+import style.Logo
 import style.icMinimize
 import style.icRemote
 
@@ -43,7 +43,7 @@ fun MainWindow(state: MainWindowState) {
     Window(
         state = state.window,
         title = "Server",
-        icon = LocalAppResources.current.icon,
+        icon = Logo(),
         onCloseRequest = { exit() },
         resizable = false,
         transparent = true,

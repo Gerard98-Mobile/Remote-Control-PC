@@ -7,3 +7,5 @@ import androidx.compose.ui.res.painterResource
 fun icRemote() = painterResource("images/remote.png")
 @Composable
 fun icMinimize() = painterResource("images/minimize.png")
+@Composable
+fun Logo() = painterResource("images/logo.png")
