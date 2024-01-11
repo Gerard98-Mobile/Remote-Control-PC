@@ -7,7 +7,8 @@ import java.awt.Robot
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 
-private const val CHANGE_VOLUME_COMMAND = "nircmd.exe changesysvolume"
+private const val HANDLE_VOLUME_EXE_PATH = "src/main/resources/nircmd.exe"
+private const val CHANGE_VOLUME_COMMAND = "changesysvolume"
 
 abstract class Action {
 
@@ -58,7 +59,11 @@ abstract class Action {
 
     class Volume(private val change: VolumeChange): Action() {
         override fun performAction(robot: Robot) {
-            Runtime.getRuntime().exec(arrayOf("$CHANGE_VOLUME_COMMAND ${change.units}"))
+            Runtime.getRuntime().exec(arrayOf(
+                HANDLE_VOLUME_EXE_PATH,
+                CHANGE_VOLUME_COMMAND,
+                change.units.toString()
+            ))
         }
 
     }

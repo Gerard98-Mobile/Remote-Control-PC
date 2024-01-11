@@ -84,7 +84,6 @@ class MainWindowState(
 
             override suspend fun onError(error: Throwable) {
                 addErrorLog(error.message ?: "Unknown error")
-                startServer()
             }
         }
     )
