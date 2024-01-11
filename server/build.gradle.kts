@@ -26,7 +26,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
             packageName = "Remote Control PC - Server"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
 
             modules("java.sql")
 
